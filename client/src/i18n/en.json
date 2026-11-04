@@ -1,0 +1,43 @@
+{
+  "app_name": "Masar",
+  "tagline": "Modern Freight & Escrow Logistics",
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Try again",
+    "search": "Search...",
+    "clear_filters": "Clear filters",
+    "export_csv": "Export CSV",
+    "currency": "JD",
+    "your_earnings": "Your earnings",
+    "price": "Price",
+    "pickup": "Pickup",
+    "destination": "Destination",
+    "status": "Status",
+    "shipment": "Shipment",
+    "shipments": "Shipments",
+    "manufacturer": "Manufacturer",
+    "driver": "Driver",
+    "escrow": "Escrow",
+    "admin": "Admin"
+  },
+  "status": {
+    "requested": "Awaiting payment",
+    "pending": "Open for drivers",
+    "waiting_load": "Waiting for loading",
+    "in_delivery": "In delivery",
+    "delivered": "Delivered, awaiting confirmation",
+    "audited": "Delivered & confirmed"
+  },
+  "driver_status": {
+    "pending": "Available",
+    "waiting_load": "Go to pickup",
+    "in_delivery": "On the way",
+    "delivered": "Delivered, awaiting confirmation",
+    "audited": "Completed and paid"
+  }
+}
+

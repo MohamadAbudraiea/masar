@@ -1,0 +1,121 @@
+export const categoryNames = {
+  light:  { en: 'Light transport (up to 2.5 t gross)',            ar: 'نقل خفيف (حتى 2.5 طن إجمالي)' },
+  medium: { en: 'Medium transport (2.5 – 7.5 t gross)',           ar: 'نقل متوسط (أكثر من 2.5 حتى 7.5 طن)' },
+  heavy:  { en: 'Heavy transport (over 7.5 t gross)',             ar: 'نقل ثقيل (أكثر من 7.5 طن)' },
+  tanker: { en: 'Tankers',                                        ar: 'صهاريج' },
+};
+
+export const typeNames = {
+  pickup:           { en: 'Pickup (single / extended / double cab)', ar: 'بيك أب (كبينة مفردة / كبينة وربع / دبل كبين)' },
+  van:              { en: 'Van / Mini van',                         ar: 'فان / ميني فان' },
+  small_truck:      { en: 'Small truck (Porter and similar)',       ar: 'شاحنة صغيرة (بورتر وما شابه)' },
+  short_chassis:    { en: 'Short chassis',                          ar: 'شاصي قصير' },
+  long_chassis:     { en: 'Long chassis',                           ar: 'شاصي طويل' },
+  special_body:     { en: 'Medium truck with special body',         ar: 'شاحنة متوسطة بجسم خاص' },
+  rigid:            { en: 'Rigid truck (single chassis)',           ar: 'شاحنة صلبة (سنجل شاصي)' },
+  tractor_trailer:  { en: 'Tractor head + trailer / semi-trailer',  ar: 'رأس قاطر + مقطورة / نصف مقطورة' },
+  heavy_service:    { en: 'Heavy service vehicles',                 ar: 'مركبات خدمية ثقيلة' },
+  water_tanker:     { en: 'Water',                                  ar: 'مياه (تنك مياه)' },
+  sewage_tanker:    { en: 'Sewage',                                 ar: 'نضح (مياه صرف / مجاري)' },
+  fuel_tanker:      { en: 'Fuel and petroleum products',            ar: 'وقود ومشتقات نفطية' },
+  chemical_tanker:  { en: 'Chemicals',                              ar: 'كيماويات' },
+  food_liquid_tanker:{ en: 'Liquid food (milk, oils)',              ar: 'سوائل غذائية (حليب، زيوت)' },
+  gas_tanker:       { en: 'Gas',                                    ar: 'غاز' },
+  bulk_tanker:      { en: 'Bulk materials (cement, grain)',         ar: 'مواد سائبة (إسمنت، حبوب)' },
+};
+
+export const bodyNames = {
+  pickup:        { en: 'Pickup bed',              ar: 'بيك أب' },
+  closed_box:    { en: 'Closed box',              ar: 'صندوق مغلق' },
+  refrigerated:  { en: 'Refrigerated',            ar: 'براد' },
+  open:          { en: 'Open bed',                ar: 'مكشوفة' },
+  curtain:       { en: 'Curtain-side',            ar: 'ستارة' },
+  tank:          { en: 'Tank',                    ar: 'تنك' },
+  tipper:        { en: 'Tipper',                  ar: 'قلّاب' },
+  tow:           { en: 'Tow / rescue (flatbed)',  ar: 'ونش سحب / إنقاذ (سطحة)' },
+  flatbed:       { en: 'Flatbed',                 ar: 'سطح' },
+  containers:    { en: 'Containers',              ar: 'حاويات' },
+  lowbed:        { en: 'Lowbed (special permit)', ar: 'لوبد (تصريح خاص)' },
+  car_carrier:   { en: 'Car carrier',             ar: 'ناقل سيارات' },
+  livestock:     { en: 'Livestock carrier',       ar: 'ناقل مواشي' },
+  crane:         { en: 'Crane',                   ar: 'ونش رافعة (كرين)' },
+  concrete_mixer:{ en: 'Concrete mixer',          ar: 'خلاطة باطون (إسمنت)' },
+  waste_compactor:{ en: 'Waste compactor',        ar: 'ضاغطة نفايات' },
+  // tanker types double as bodies (type = body for tankers)
+  water_tanker: { en: 'Water tanker', ar: 'تنك مياه' },
+  sewage_tanker: { en: 'Sewage tanker', ar: 'نضح' },
+  fuel_tanker: { en: 'Fuel tanker', ar: 'صهريج وقود' },
+  chemical_tanker: { en: 'Chemical tanker (ADR)', ar: 'صهريج كيماويات' },
+  food_liquid_tanker: { en: 'Liquid-food tanker', ar: 'صهريج سوائل غذائية' },
+  gas_tanker: { en: 'Gas tanker', ar: 'صهريج غاز' },
+  bulk_tanker: { en: 'Bulk tanker', ar: 'صهريج مواد سائبة' },
+};
+
+export const gross = {
+  light:  { mode: 'fixed',  options: [{ code: 'light_up_to_2_5', label_en: 'Up to 2.5 t', label_ar: 'حتى 2.5 طن' }] },
+  medium: { mode: 'fixed',  options: [{ code: 'medium_2_5_7_5',  label_en: '2.5 – 7.5 t', label_ar: '2.5 – 7.5 طن' }] },
+  rigid:  { mode: 'choice', options: [
+    { code: 'rigid_2_axles', label_en: '2 axles — 21 t', label_ar: 'محورين — 21 طن', value: 21 },
+    { code: 'rigid_3_axles', label_en: '3 axles — 27 t', label_ar: '3 محاور — 27 طن', value: 27 },
+    { code: 'rigid_4_axles', label_en: '4 axles — 35 t', label_ar: '4 محاور — 35 طن', value: 35 },
+    { code: 'rigid_5_axles', label_en: '5 axles — 36 t', label_ar: '5 محاور — 36 طن', value: 36 } ] },
+  tractor_trailer: { mode: 'choice', options: [
+    { code: 'tt_33_40', label_en: '33 – 40 t', label_ar: '33 – 40 طن', min: 33, max: 40 },
+    { code: 'tt_40_50', label_en: '40 – 50 t', label_ar: '40 – 50 طن', min: 40, max: 50 },
+    { code: 'tt_50_60', label_en: '50 – 60 t', label_ar: '50 – 60 طن', min: 50, max: 60 } ] },
+  by_vehicle: { mode: 'fixed', options: [{ code: 'by_vehicle_weight', label_en: 'By vehicle weight', label_ar: 'حسب وزن المركبة' }] },
+};
+
+export const truckRows = [
+  // LIGHT (license 4)
+  ['light','pickup','pickup',          0.5, 1.2,'ton',4],
+  ['light','van','closed_box',         0.5, 1.0,'ton',4],
+  ['light','van','refrigerated',       0.4, 0.9,'ton',4],
+  ['light','small_truck','closed_box', 0.8, 1.5,'ton',4],
+  ['light','small_truck','refrigerated',0.8,1.2,'ton',4],
+  ['light','small_truck','open',       1.0, 1.5,'ton',4],
+  // MEDIUM (license 4)
+  ['medium','short_chassis','closed_box',   2.0, 3.5,'ton',4],
+  ['medium','short_chassis','refrigerated', 1.5, 3.0,'ton',4],
+  ['medium','short_chassis','open',         2.0, 4.0,'ton',4],
+  ['medium','short_chassis','curtain',      2.0, 4.0,'ton',4],
+  ['medium','short_chassis','tank',      3000,5000,'liter',4],
+  ['medium','long_chassis','closed_box',    3.0, 5.0,'ton',4],
+  ['medium','long_chassis','refrigerated',  2.5, 4.0,'ton',4],
+  ['medium','long_chassis','open',          3.0, 5.0,'ton',4],
+  ['medium','long_chassis','curtain',       3.0, 5.0,'ton',4],
+  ['medium','long_chassis','tank',       4000,6000,'liter',4],
+  ['medium','special_body','tipper',        3.0, 5.0,'ton',4],
+  ['medium','special_body','tow',           2.0, 4.0,'ton',4],
+  // HEAVY rigid (license 5)
+  ['heavy','rigid','closed_box',  10,18,'ton',5],
+  ['heavy','rigid','refrigerated', 8,15,'ton',5],
+  ['heavy','rigid','open',        10,20,'ton',5],
+  ['heavy','rigid','curtain',     12,20,'ton',5],
+  ['heavy','rigid','tipper',      12,25,'ton',5],
+  ['heavy','rigid','livestock',    8,14,'ton',5],
+  // HEAVY tractor + trailer (license 6)
+  ['heavy','tractor_trailer','flatbed',     25,32,'ton',6],
+  ['heavy','tractor_trailer','curtain',     24,28,'ton',6],
+  ['heavy','tractor_trailer','closed_box',  24,28,'ton',6],
+  ['heavy','tractor_trailer','refrigerated',22,26,'ton',6],
+  ['heavy','tractor_trailer','tipper',      28,35,'ton',6],
+  ['heavy','tractor_trailer','containers',  24,30,'ton',6],
+  ['heavy','tractor_trailer','lowbed',      30,60,'ton',6],
+  ['heavy','tractor_trailer','car_carrier',  1,20,'ton',6],
+  ['heavy','tractor_trailer','livestock',   18,25,'ton',6],
+  // HEAVY service vehicles (license 5) — is_service_vehicle = true
+  ['heavy','heavy_service','tow',            10,40,'ton',5],
+  ['heavy','heavy_service','crane',          10,60,'ton',5],
+  ['heavy','heavy_service','concrete_mixer',  6, 9,'m3',5],
+  ['heavy','heavy_service','waste_compactor', 8,20,'m3',5],
+  // TANKERS (license 5)
+  ['tanker','water_tanker','water_tanker',        4000,30000,'liter',5],
+  ['tanker','sewage_tanker','sewage_tanker',      4000,12000,'liter',5],
+  ['tanker','fuel_tanker','fuel_tanker',         10000,40000,'liter',5],
+  ['tanker','chemical_tanker','chemical_tanker', 10000,30000,'liter',5],
+  ['tanker','food_liquid_tanker','food_liquid_tanker',5000,25000,'liter',5],
+  ['tanker','gas_tanker','gas_tanker',              10,   20,'ton',5],
+  ['tanker','bulk_tanker','bulk_tanker',            25,   35,'ton',5],
+];
+

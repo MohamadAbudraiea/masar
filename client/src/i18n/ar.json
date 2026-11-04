@@ -1,0 +1,43 @@
+{
+  "app_name": "مسار",
+  "tagline": "إدارة الشحن وحساب الضمان",
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "back": "رجوع",
+    "loading": "جاري التحميل...",
+    "error": "حدث خطأ ما",
+    "retry": "إعادة المحاولة",
+    "search": "بحث...",
+    "clear_filters": "مسح الفلاتر",
+    "export_csv": "تصدير CSV",
+    "currency": "د.أ",
+    "your_earnings": "أرباحك",
+    "price": "السعر",
+    "pickup": "موقع الاستلام",
+    "destination": "موقع التسليم",
+    "status": "الحالة",
+    "shipment": "شحنة",
+    "shipments": "الشحنات",
+    "manufacturer": "المصنع",
+    "driver": "السائق",
+    "escrow": "حساب الضمان",
+    "admin": "الإدارة"
+  },
+  "status": {
+    "requested": "بانتظار الدفع",
+    "pending": "متاحة للسائقين",
+    "waiting_load": "بانتظار التحميل",
+    "in_delivery": "قيد التوصيل",
+    "delivered": "تم التسليم، بانتظار التأكيد",
+    "audited": "تم التسليم والتأكيد"
+  },
+  "driver_status": {
+    "pending": "متاحة",
+    "waiting_load": "توجه للاستلام",
+    "in_delivery": "في الطريق",
+    "delivered": "تم التسليم، بانتظار التأكيد",
+    "audited": "مكتملة ومصروفة"
+  }
+}
+
