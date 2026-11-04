@@ -12,3 +12,6 @@ Masar manages the delivery of goods from large manufacturers to their resellers 
 - `client/`: React frontend app (Desktop dashboards for Admin/Escrow/Manufacturer, phone-framed mobile app for Drivers).
 - `MD-Files/`: Project specifications and reference documentation.
 
+## to run backend and frontend:
+- Backend: cd server/ --> npm run dev
+- Frontend:  cd client/ -->npm run dev
