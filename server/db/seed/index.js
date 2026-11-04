@@ -3,6 +3,7 @@ import { pool } from '../../src/db.js';
 import { goodsCategories } from './goodsCategories.js';
 import { categoryNames, typeNames, bodyNames, gross, truckRows } from './truckTypes.js';
 import { seedDemoAccounts } from './demoAccounts.js';
+import { runFullDemoSeed } from './fullDemoSeed.js';
 
 export async function seedReferenceData() {
   console.log('Seeding reference data...');
@@ -90,8 +91,8 @@ export async function seedReferenceData() {
     );
   }
   console.log(`✓ Seeded ${truckRows.length} truck catalog configurations.`);
-  // 3. Demo Accounts
-  await seedDemoAccounts();
+  // 3. Full Demo Seed (09)
+  await runFullDemoSeed();
 }
 
 // Auto-run if executed directly

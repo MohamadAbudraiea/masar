@@ -21,6 +21,7 @@ import TruckLoader from '../../components/TruckLoader.jsx';
 import { formatDateTime } from '../../lib/time.js';
 import { formatMoney } from '../../lib/format.js';
 import { linkTo } from '../../lib/links.js';
+import AdminLiveMap from '../../components/AdminLiveMap.jsx';
 
 export default function AdminOverview() {
   const navigate = useNavigate();
@@ -137,6 +138,9 @@ export default function AdminOverview() {
           onClick={() => navigate('/admin/financial')}
         />
       </div>
+
+      {/* Live Interactive Fleet Map */}
+      <AdminLiveMap />
 
       {/* Main Grid: Activity Feed & Newest Shipments */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

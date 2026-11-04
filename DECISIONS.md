@@ -56,3 +56,40 @@ This file tracks architectural and implementation decisions where specifications
 - **Global Search (`/api/search?q=`)**: Role-scoped instantaneous multi-entity search bar in the desktop header returning top tickets, shippers, and drivers with direct navigation.
 - **URL-Synced Filter State (`useUrlFilters`)**: All table search queries, status tabs, date ranges, and pagination sync bidirectionally with URL query parameters (`?status=...&q=...&page=...`), preserving complete browser back/forward navigation history across all dashboards.
 
+## 2026-11-04: Wow, Polish & Landing Experience (Phase 6)
+- **Public Landing Page (`client/src/pages/public/Landing.jsx`)**:
+  - Implemented the hero signature route animation with 6 sequential stations (`Requested → SafePay Deposited → Driver Accepted → Goods Loaded → Delivered → Payout Released`) that light up sequentially on load with timestamps.
+  - Fully bilingual in Arabic and English with complete typography and RTL layout flip.
+  - 7 structured sections: How it works (6 sequence steps), For Manufacturers (with shipment detail component mock), For Drivers (with PhoneFrame mobile app mock), SafePay Escrow protection, Trucks We Cover (4 gross weight classes and bodies), Trust Strip (platform volume metrics and verified testimonials from `landingContent.js`), and Final CTA & Footer.
+- **Admin Live Fleet Map (`client/src/components/AdminLiveMap.jsx`)**:
+  - Interactive Leaflet map displaying active platform shipments (`pending`, `waiting_load`, `in_delivery`) over Jordan.
+  - Live animated moving truck marker with smooth position interpolation along the route for shipments currently in transit, complete with a "Simulated movement" live badge.
+  - Interactive map popups with direct links to shipment details.
+- **Toast Notifications (`client/src/state/toast.jsx`)**:
+  - Lightweight, accessible toast notification provider supporting success, error, and informational alerts.
+- **404 Not Found Page (`client/src/pages/public/NotFound.jsx`)**:
+  - Custom branded 404 page with navigation back to safety.
+- **Favicon & Brand Assets**:
+  - Created high-contrast SVG brand favicon (`client/public/favicon.svg`).
+
+## 2026-11-04: Full Demo Seed & Verification (Phase 7)
+- **Repeatable Deterministic Seed (`server/db/seed/fullDemoSeed.js`)**:
+  - Implemented complete demo dataset per `09-DEMO-DATA-AND-SCRIPT.md` that can be re-run at any time via `npm run db:seed`.
+  - 6 Manufacturers across Jordan's primary manufacturing sectors: Al-Nour Dairy (Sahab), Jordan Steel Co (Hashimiya), Petra Pharma (Salt), Arab Plastics (King Abdullah II Ind City), Dead Sea Minerals (Ghor Safi), and Jordan Harvest Agro (Mafraq).
+  - 12 Drivers with diverse truck categories (light, medium, heavy, extra_heavy), body variations (flatbed, curtainsider, reefer, tanker, box), cooling systems, and ADR hazmat certifications.
+  - 2 Pending Accounts (1 manufacturer, 1 driver) pre-seeded for live onboarding approval demonstrations in `/admin/approvals`.
+  - Saved pickup and drop-off locations for each manufacturer with verified Jordan coordinates, cities, and industrial zones.
+  - 45 Deterministic Shipments (`MSR-000079` through `MSR-000123`) covering all lifecycle stages:
+    - 27 `audited` shipments distributed across the past 90 days with complete SafePay ledger entries (deposits, payouts, commissions) and bilateral ratings.
+    - 4 `delivered` shipments awaiting manufacturer audit.
+    - 4 `in_delivery` shipments actively on the road.
+    - 4 `waiting_load` shipments accepted by drivers awaiting factory loading.
+    - 4 `pending` shipments funded in escrow available for matching drivers.
+    - 2 `requested` shipments awaiting shipper payment.
+  - Reset PostgreSQL ticket sequence so the next newly created shipment starts cleanly at `MSR-000124`.
+- **System Verification**:
+  - Complete backend test suite: 59 out of 59 tests passing across all operational and architectural phases.
+  - Production frontend build (`vite build`): compiled 1,768 modules in 2.58s with 0 errors.
+
+
+

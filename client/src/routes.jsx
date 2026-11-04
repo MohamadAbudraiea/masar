@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './state/auth.jsx';
 
 // Public Pages
+import Landing from './pages/public/Landing.jsx';
 import Login from './pages/public/Login.jsx';
 import PendingApproval from './pages/public/PendingApproval.jsx';
 import SignupChoice from './pages/public/SignupChoice.jsx';
@@ -10,6 +11,7 @@ import ManufacturerSignup from './pages/public/ManufacturerSignup.jsx';
 import DriverSignup from './pages/public/DriverSignup.jsx';
 import OpenResolver from './pages/public/OpenResolver.jsx';
 import DevEmails from './pages/dev/DevEmails.jsx';
+import NotFound from './pages/public/NotFound.jsx';
 
 // Shared
 import NotificationsPage from './pages/shared/NotificationsPage.jsx';
@@ -103,7 +105,7 @@ export default function AppRoutes() {
               <Navigate to={`/${user.role}`} replace />
             )
           ) : (
-            <Navigate to="/login" replace />
+            <Landing />
           )
         }
       />
@@ -207,7 +209,8 @@ export default function AppRoutes() {
       </Route>
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/404" element={<NotFound />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
