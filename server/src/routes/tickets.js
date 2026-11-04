@@ -6,7 +6,9 @@ import { computeSplit } from '../services/money.js';
 import { calculateRoute, reverseGeocode } from '../services/geo.js';
 import { checkDriverMatch } from '../services/matching.js';
 import { serializeTicket, computeArrival } from '../serializers/ticket.js';
-import { createNotification, logActivity } from '../services/notifications.js';
+import { notify, createNotification, logActivity } from '../services/notifications.js';
+import { sendCsvResponse } from '../services/csv.js';
+import { generateTicketPdf } from '../services/pdf.js';
 
 const router = express.Router();
 router.use(auth);
@@ -216,7 +218,7 @@ router.get('/', async (req, res, next) => {
       LEFT JOIN truck_types tt ON tt.id = trk.truck_type_id
       ${whereClause}
       ORDER BY t.created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
+      ${req.query.format === 'csv' ? '' : `LIMIT ${limit} OFFSET ${offset}`}
     `;
 
     const listRes = await query(listSql, params);
@@ -227,6 +229,49 @@ router.get('/', async (req, res, next) => {
         isAssigned: row.driver_id === req.user.id,
       });
     });
+
+    if (req.query.format === 'csv') {
+      let columns;
+      if (req.user.role === 'manufacturer') {
+        columns = [
+          { key: 'ticket_number', label: 'Shipment Number' },
+          { key: 'status', label: 'Status' },
+          { key: 'pickup_city', label: 'Pickup City', format: (val, r) => r.pickup?.city || r.pickup_city || '' },
+          { key: 'dest_city', label: 'Destination City', format: (val, r) => r.dest?.city || r.dest_city || '' },
+          { key: 'pickup_at', label: 'Pickup Time' },
+          { key: 'driver_name', label: 'Driver', format: (val, r) => r.driver?.name || '' },
+          { key: 'price', label: 'Price (JD)' },
+          { key: 'created_at', label: 'Created At' },
+        ];
+      } else if (req.user.role === 'driver') {
+        columns = [
+          { key: 'ticket_number', label: 'Shipment Number' },
+          { key: 'status', label: 'Status' },
+          { key: 'pickup_city', label: 'Pickup City', format: (val, r) => r.pickup?.city || r.pickup_city || '' },
+          { key: 'dest_city', label: 'Destination City', format: (val, r) => r.dest?.city || r.dest_city || '' },
+          { key: 'pickup_at', label: 'Pickup Time' },
+          { key: 'earnings', label: 'Earnings (JD)' },
+          { key: 'created_at', label: 'Created At' },
+        ];
+      } else {
+        // Admin / Escrow
+        columns = [
+          { key: 'ticket_number', label: 'Shipment Number' },
+          { key: 'status', label: 'Status' },
+          { key: 'manufacturer_name', label: 'Manufacturer', format: (val, r) => r.manufacturer?.name || '' },
+          { key: 'driver_name', label: 'Driver', format: (val, r) => r.driver?.name || '' },
+          { key: 'pickup_city', label: 'Pickup City', format: (val, r) => r.pickup?.city || r.pickup_city || '' },
+          { key: 'dest_city', label: 'Destination City', format: (val, r) => r.dest?.city || r.dest_city || '' },
+          { key: 'pickup_at', label: 'Pickup Time' },
+          { key: 'price', label: 'Price (JD)' },
+          { key: 'escrow_fee', label: 'Escrow Fee (JD)' },
+          { key: 'masar_fee', label: 'Masar Fee (JD)' },
+          { key: 'driver_net', label: 'Driver Net (JD)' },
+          { key: 'created_at', label: 'Created At' },
+        ];
+      }
+      return sendCsvResponse(res, `masar-shipments-${Date.now()}.csv`, items, columns);
+    }
 
     res.json({
       items,
@@ -707,19 +752,31 @@ router.post('/:id/pay', requireRole('manufacturer'), async (req, res, next) => {
       });
 
       // Notification to Manufacturer
-      await createNotification(client, {
-        userId: req.user.id,
+      await notify({
+        client,
+        userIds: [req.user.id],
         type: 'payment_received_mfr',
         params: { n: ticket.ticket_number },
         link: `/manufacturer/shipments/${ticket.id}`,
         ticketId: ticket.id,
+        email: {
+          templateKey: 'PaymentReceived',
+          data: {
+            ticketNumber: ticket.ticket_number,
+            ticketId: ticket.id,
+            price: Number(ticket.price).toFixed(3),
+            route: `${ticket.pickup_city || 'Jordan'} → ${ticket.destination_city || 'Jordan'}`,
+          },
+        },
       });
 
       // Notification to Escrow
       const escrowUsers = await client.query(`SELECT id FROM users WHERE role = 'escrow'`);
-      for (const esc of escrowUsers.rows) {
-        await createNotification(client, {
-          userId: esc.id,
+      const escrowIds = escrowUsers.rows.map((e) => e.id);
+      if (escrowIds.length > 0) {
+        await notify({
+          client,
+          userIds: escrowIds,
           type: 'payment_received_escrow',
           params: {
             amount: `${Number(ticket.price).toFixed(3)} JD`,
@@ -728,7 +785,88 @@ router.post('/:id/pay', requireRole('manufacturer'), async (req, res, next) => {
           },
           link: `/escrow/shipments/${ticket.id}`,
           ticketId: ticket.id,
+          email: {
+            templateKey: 'FundsHeld',
+            data: {
+              ticketNumber: ticket.ticket_number,
+              ticketId: ticket.id,
+              companyName: req.user.name,
+              amount: Number(ticket.price).toFixed(3),
+            },
+          },
         });
+      }
+
+      // Broadcast new_match to qualified free drivers
+      const freeDriversRes = await client.query(
+        `SELECT u.id, u.name, u.email,
+                d.scope, d.license_class,
+                t.gross_weight_code, t.cooling, t.adr_certified,
+                tt.category, tt.type_code, tt.body_code, tt.payload_min, tt.payload_max, tt.unit
+         FROM users u
+         JOIN driver_profiles d ON d.user_id = u.id
+         JOIN trucks t ON t.driver_id = u.id
+         JOIN truck_types tt ON tt.id = t.truck_type_id
+         WHERE u.status = 'approved'
+           AND NOT EXISTS (
+             SELECT 1 FROM tickets act
+             WHERE act.driver_id = u.id AND act.status IN ('waiting_load', 'in_delivery')
+           )`
+      );
+
+      for (const d of freeDriversRes.rows) {
+        const match = checkDriverMatch(
+          {
+            required_category: ticket.suggested_category,
+            required_body: ticket.suggested_body_code,
+            required_cooling: ticket.cooling,
+            quantity: ticket.quantity,
+            unit: ticket.unit || 'ton',
+            trip_type: ticket.trip_type,
+            is_hazardous: ticket.adr_certified,
+            pickup_at: ticket.pickup_at,
+          },
+          {
+            status: 'approved',
+            scope: d.scope,
+            truck: {
+              category: d.category,
+              body_code: d.body_code,
+              cooling: d.cooling,
+              payload_max: Number(d.payload_max),
+              unit: d.unit,
+              adr_certified: d.adr_certified,
+            },
+            has_active_shipment: false,
+          }
+        );
+
+        if (match.matches && match.canAccept) {
+          await notify({
+            client,
+            userIds: [d.id],
+            type: 'new_match',
+            params: {
+              n: ticket.ticket_number,
+              from: ticket.pickup_city || 'Jordan',
+              to: ticket.destination_city || 'Jordan',
+              earnings: `${Number(ticket.driver_net).toFixed(3)} JD`,
+            },
+            link: `/driver/shipments/${ticket.id}`,
+            ticketId: ticket.id,
+            email: {
+              templateKey: 'NewMatch',
+              data: {
+                ticketNumber: ticket.ticket_number,
+                ticketId: ticket.id,
+                fromCity: ticket.pickup_city || 'Jordan',
+                toCity: ticket.destination_city || 'Jordan',
+                earnings: Number(ticket.driver_net).toFixed(3),
+                pickupDate: ticket.pickup_at ? new Date(ticket.pickup_at).toLocaleString('en-GB', { timeZone: 'Asia/Amman' }) + ' (Asia/Amman)' : '',
+              },
+            },
+          });
+        }
       }
     });
 
@@ -837,8 +975,9 @@ router.post('/:id/accept', requireRole('driver'), async (req, res, next) => {
       });
 
       // Notification to Manufacturer: "Mr. {driver} accepted {n}"
-      await createNotification(client, {
-        userId: accepted.manufacturer_id,
+      await notify({
+        client,
+        userIds: [accepted.manufacturer_id],
         type: 'driver_accepted_mfr',
         params: {
           driver: req.user.name,
@@ -846,15 +985,36 @@ router.post('/:id/accept', requireRole('driver'), async (req, res, next) => {
         },
         link: `/manufacturer/shipments/${accepted.id}`,
         ticketId: accepted.id,
+        email: {
+          templateKey: 'DriverAccepted',
+          data: {
+            ticketNumber: accepted.ticket_number,
+            ticketId: accepted.id,
+            driverName: req.user.name,
+            driverPhone: req.user.phone,
+            driverId: req.user.id,
+          },
+        },
       });
 
       // Notification to Driver
-      await createNotification(client, {
-        userId: req.user.id,
+      await notify({
+        client,
+        userIds: [req.user.id],
         type: 'driver_accepted_driver',
         params: { n: accepted.ticket_number },
         link: `/driver/active`,
         ticketId: accepted.id,
+        email: {
+          templateKey: 'ShipmentAccepted',
+          data: {
+            ticketNumber: accepted.ticket_number,
+            ticketId: accepted.id,
+            pickupAddress: accepted.pickup_address,
+            pickupTime: accepted.pickup_at ? new Date(accepted.pickup_at).toLocaleString('en-GB', { timeZone: 'Asia/Amman' }) + ' (Asia/Amman)' : '',
+            earnings: Number(accepted.driver_net).toFixed(3),
+          },
+        },
       });
 
       return accepted;
@@ -983,18 +1143,29 @@ router.post('/:id/loaded', requireRole('manufacturer'), async (req, res, next) =
       });
 
       // Notification to Manufacturer
-      await createNotification(client, {
-        userId: req.user.id,
+      await notify({
+        client,
+        userIds: [req.user.id],
         type: 'loaded_mfr',
         params: { n: ticket.ticket_number },
         link: `/manufacturer/shipments/${ticket.id}`,
         ticketId: ticket.id,
+        email: {
+          templateKey: 'OnItsWay',
+          data: {
+            ticketNumber: ticket.ticket_number,
+            ticketId: ticket.id,
+            toCity: ticket.destination_city || 'Jordan',
+            loadedAt: new Date().toLocaleString('en-GB', { timeZone: 'Asia/Amman' }) + ' (Asia/Amman)',
+          },
+        },
       });
 
       // Notification to Driver
       if (ticket.driver_id) {
-        await createNotification(client, {
-          userId: ticket.driver_id,
+        await notify({
+          client,
+          userIds: [ticket.driver_id],
           type: 'loaded_driver',
           params: { n: ticket.ticket_number },
           link: `/driver/active`,
@@ -1055,17 +1226,29 @@ router.post('/:id/delivered', requireRole('driver'), async (req, res, next) => {
       });
 
       // Notification to Manufacturer: Verify and confirm
-      await createNotification(client, {
-        userId: ticket.manufacturer_id,
+      await notify({
+        client,
+        userIds: [ticket.manufacturer_id],
         type: 'delivered_mfr',
         params: { n: ticket.ticket_number },
         link: `/manufacturer/shipments/${ticket.id}`,
         ticketId: ticket.id,
+        email: {
+          templateKey: 'DeliveredConfirm',
+          data: {
+            ticketNumber: ticket.ticket_number,
+            ticketId: ticket.id,
+            driverName: req.user.name,
+            driverId: req.user.id,
+            deliveredAt: new Date().toLocaleString('en-GB', { timeZone: 'Asia/Amman' }) + ' (Asia/Amman)',
+          },
+        },
       });
 
       // Notification to Driver: Earnings pending release
-      await createNotification(client, {
-        userId: req.user.id,
+      await notify({
+        client,
+        userIds: [req.user.id],
         type: 'delivered_driver',
         params: {
           earnings: `${Number(ticket.driver_net).toFixed(3)} JD`,
@@ -1076,9 +1259,11 @@ router.post('/:id/delivered', requireRole('driver'), async (req, res, next) => {
 
       // Notification to Escrow
       const escrowUsers = await client.query(`SELECT id FROM users WHERE role = 'escrow'`);
-      for (const esc of escrowUsers.rows) {
-        await createNotification(client, {
-          userId: esc.id,
+      const escrowIds = escrowUsers.rows.map((e) => e.id);
+      if (escrowIds.length > 0) {
+        await notify({
+          client,
+          userIds: escrowIds,
           type: 'delivered_escrow',
           params: { n: ticket.ticket_number },
           link: `/escrow/shipments/${ticket.id}`,
@@ -1185,20 +1370,30 @@ router.post('/:id/confirm', requireRole('manufacturer'), async (req, res, next) 
       // 4. Notifications
       // Driver: "{amount} transferred successfully to your account {iban}"
       const payoutDest = driverInfo.iban || driverInfo.cliq_alias || 'your account';
-      await createNotification(client, {
-        userId: ticket.driver_id,
+      await notify({
+        client,
+        userIds: [ticket.driver_id],
         type: 'payout_driver',
         params: {
           amount: `${Number(ticket.driver_net).toFixed(3)} JD`,
           iban: payoutDest,
         },
-        link: `/driver/shipments/${ticket.id}`,
+        link: `/driver/earnings`,
         ticketId: ticket.id,
+        email: {
+          templateKey: 'PayoutComplete',
+          data: {
+            ticketNumber: ticket.ticket_number,
+            amount: Number(ticket.driver_net).toFixed(3),
+            iban: payoutDest,
+          },
+        },
       });
 
       // Manufacturer: "Delivery of {n} confirmed. Please rate Mr. {driver}"
-      await createNotification(client, {
-        userId: req.user.id,
+      await notify({
+        client,
+        userIds: [req.user.id],
         type: 'confirmed_mfr',
         params: {
           n: ticket.ticket_number,
@@ -1206,25 +1401,48 @@ router.post('/:id/confirm', requireRole('manufacturer'), async (req, res, next) 
         },
         link: `/manufacturer/shipments/${ticket.id}`,
         ticketId: ticket.id,
+        email: {
+          templateKey: 'DeliveryConfirmed',
+          data: {
+            ticketNumber: ticket.ticket_number,
+            ticketId: ticket.id,
+            driverName: driverInfo.name || 'Driver',
+          },
+        },
       });
 
       // Escrow: full breakdown released
       const escrowUsers = await client.query(`SELECT id FROM users WHERE role = 'escrow'`);
-      for (const esc of escrowUsers.rows) {
-        await createNotification(client, {
-          userId: esc.id,
+      const escrowIds = escrowUsers.rows.map((e) => e.id);
+      if (escrowIds.length > 0) {
+        await notify({
+          client,
+          userIds: escrowIds,
           type: 'release_escrow',
           params: { n: ticket.ticket_number },
           link: `/escrow/shipments/${ticket.id}`,
           ticketId: ticket.id,
+          email: {
+            templateKey: 'ReleaseRecord',
+            data: {
+              ticketNumber: ticket.ticket_number,
+              companyName: req.user.name,
+              totalPrice: Number(ticket.price).toFixed(3),
+              driverNet: Number(ticket.driver_net).toFixed(3),
+              masarFee: Number(ticket.masar_fee).toFixed(3),
+              escrowFee: Number(ticket.escrow_fee).toFixed(3),
+            },
+          },
         });
       }
 
       // Admin: Masar commission +{amount} from {n}
       const adminUsers = await client.query(`SELECT id FROM users WHERE role = 'admin'`);
-      for (const adm of adminUsers.rows) {
-        await createNotification(client, {
-          userId: adm.id,
+      const adminIds = adminUsers.rows.map((a) => a.id);
+      if (adminIds.length > 0) {
+        await notify({
+          client,
+          userIds: adminIds,
           type: 'masar_income',
           params: {
             amount: `${Number(ticket.masar_fee).toFixed(3)} JD`,
@@ -1301,6 +1519,37 @@ router.post('/:id/rating', async (req, res, next) => {
     });
 
     res.json({ success: true, message: 'Rating submitted successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/tickets/:id/pdf
+ * Generates role-shaped official summary PDF for audited shipments.
+ */
+router.get('/:id/pdf', async (req, res, next) => {
+  try {
+    const ticketId = req.params.id;
+    const ticket = await fetchTicketWithDetails(ticketId);
+
+    if (!ticket) {
+      throw new AppError('NOT_FOUND', 'Shipment not found', 404);
+    }
+
+    // Role check:
+    if (req.user.role === 'manufacturer' && ticket.manufacturer_id !== req.user.id) {
+      throw new AppError('FORBIDDEN', 'Access denied to this shipment', 403);
+    }
+    if (req.user.role === 'driver' && ticket.driver_id !== req.user.id) {
+      throw new AppError('FORBIDDEN', 'Access denied to this shipment', 403);
+    }
+
+    if (ticket.status !== 'audited') {
+      throw new AppError('INVALID_STATUS', 'Summary PDF is only available for confirmed (audited) shipments', 400);
+    }
+
+    generateTicketPdf(ticket, req.user.role, res);
   } catch (err) {
     next(err);
   }

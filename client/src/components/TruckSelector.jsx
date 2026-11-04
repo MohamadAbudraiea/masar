@@ -129,11 +129,17 @@ return (
         value={value.category || ''}
         onChange={(e) => {
           const cat = e.target.value;
+          const rows = truckRows.filter(
+            (r) => r[0] === cat && (!licenseClass || r[6] <= licenseClass)
+          );
+          const firstType = rows[0] ? rows[0][1] : '';
+          const typeRows = rows.filter((r) => r[1] === firstType);
+          const firstBody = typeRows[0] ? typeRows[0][2] : '';
           onChange({
             category: cat,
-            type_code: '',
-            body_code: '',
-            cooling: '',
+            type_code: firstType,
+            body_code: firstBody,
+            cooling: firstBody === 'refrigerated' ? (value.cooling || 'chilled') : '',
             gross_weight_code: '',
           });
         }}
@@ -158,11 +164,18 @@ return (
           value={value.type_code || ''}
           onChange={(e) => {
             const typeCode = e.target.value;
+            const rows = truckRows.filter(
+              (r) =>
+                r[0] === value.category &&
+                r[1] === typeCode &&
+                (!licenseClass || r[6] <= licenseClass)
+            );
+            const firstBody = rows[0] ? rows[0][2] : '';
             onChange({
               ...value,
               type_code: typeCode,
-              body_code: '',
-              cooling: '',
+              body_code: firstBody,
+              cooling: firstBody === 'refrigerated' ? (value.cooling || 'chilled') : '',
             });
           }}
           className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-white text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -208,7 +221,16 @@ return (
           {isAr ? 'الحمولة المسموحة للمركبة:' : 'Payload Capacity:'}
         </span>
         <span className="font-bold">
-          {selectedRow[3]} – {selectedRow[4]} {selectedRow[5]}
+          {selectedRow[3]} – {selectedRow[4]}{' '}
+          {selectedRow[5] === 'ton'
+            ? isAr
+              ? 'طن'
+              : 'ton'
+            : selectedRow[5] === 'liter'
+            ? isAr
+              ? 'لتر'
+              : 'liter'
+            : selectedRow[5]}
         </span>
       </div>
     )}

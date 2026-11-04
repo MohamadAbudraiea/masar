@@ -33,9 +33,11 @@ export default function LocationPicker({
   onChange,
   savedLocations = [],
   title,
+  showLocateMe,
 }) {
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
+  const canLocateMe = showLocateMe !== undefined ? showLocateMe : kind !== 'destination';
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('saved'); // 'saved' | 'search' | 'link'
@@ -145,7 +147,7 @@ export default function LocationPicker({
         let rev = { city: 'Amman', area: null, address: linkInput };
         try {
           rev = await apiClient(`/geo/reverse?lat=${resolved.lat}&lng=${resolved.lng}`);
-        } catch (e) {}
+        } catch (e) { }
 
         selectLocation({
           label: rev.area || rev.city || 'Custom Pin',
@@ -184,20 +186,22 @@ export default function LocationPicker({
         </label>
 
         {/* Instant Locate Me Pill Button */}
-        <button
-          type="button"
-          onClick={handleLocateMe}
-          disabled={isLocating}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs disabled:opacity-50"
-          title={isAr ? 'تحديد موقعي الجغرافي الحالي تلقائياً' : 'Detect my current GPS position'}
-        >
-          {isLocating ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-          ) : (
-            <Crosshair className="w-3.5 h-3.5 text-emerald-600" />
-          )}
-          <span>{isLocating ? (isAr ? 'جاري التحديد...' : 'Locating...') : (isAr ? 'حدد موقعي' : 'Locate Me')}</span>
-        </button>
+        {canLocateMe && (
+          <button
+            type="button"
+            onClick={handleLocateMe}
+            disabled={isLocating}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs disabled:opacity-50"
+            title={isAr ? 'تحديد موقعي الجغرافي الحالي تلقائياً' : 'Detect my current GPS position'}
+          >
+            {isLocating ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+            ) : (
+              <Crosshair className="w-3.5 h-3.5 text-emerald-600" />
+            )}
+            <span>{isLocating ? (isAr ? 'جاري التحديد...' : 'Locating...') : (isAr ? 'حدد موقعي' : 'Locate Me')}</span>
+          </button>
+        )}
       </div>
 
       {/* Main Trigger Field */}
@@ -234,51 +238,54 @@ export default function LocationPicker({
         </button>
 
         {/* Direct Locate Me icon button */}
-        <button
-          type="button"
-          onClick={handleLocateMe}
-          disabled={isLocating}
-          className="px-3 rounded-xl border border-line bg-white hover:bg-slate-50 text-emerald-700 flex items-center justify-center shadow-2xs shrink-0 disabled:opacity-50"
-          title={isAr ? 'حدد موقعي الحالي' : 'Locate Me'}
-        >
-          {isLocating ? (
-            <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-          ) : (
-            <Navigation className="w-4 h-4 text-emerald-600" />
+          {canLocateMe && (
+            <button
+              type="button"
+              onClick={handleLocateMe}
+              disabled={isLocating}
+              className="px-3 rounded-xl border border-line bg-white hover:bg-slate-50 text-emerald-700 flex items-center justify-center shadow-2xs shrink-0 disabled:opacity-50"
+              title={isAr ? 'حدد موقعي الحالي' : 'Locate Me'}
+            >
+              {isLocating ? (
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+              ) : (
+              <Navigation className="w-4 h-4 text-emerald-600" />
+              )}
+            </button>
           )}
-        </button>
-      </div>
+        </div>
 
       {/* Dropdown Popover */}
       {isOpen && (
         <div className="absolute z-40 mt-2 w-full bg-card border border-line rounded-2xl shadow-2xl p-4 space-y-3 animate-fade-in">
           {/* Quick Locate Me Banner inside Modal */}
-          <button
-            type="button"
-            onClick={handleLocateMe}
-            disabled={isLocating}
-            className="w-full p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-center gap-2 hover:bg-emerald-100 transition-colors disabled:opacity-50"
-          >
-            {isLocating ? (
-              <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-            ) : (
-              <Crosshair className="w-4 h-4 text-emerald-600" />
-            )}
-            <span>
-              {isLocating
-                ? isAr ? 'جاري قراءة إحداثيات موقعك...' : 'Reading GPS coordinates...'
-                : isAr ? 'استخدام موقعي الحالي الآن (GPS)' : 'Use My Current Location Now (GPS)'}
-            </span>
-          </button>
+          {canLocateMe && (
+            <button
+              type="button"
+              onClick={handleLocateMe}
+              disabled={isLocating}
+              className="w-full p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-center gap-2 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+            >
+              {isLocating ? (
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+              ) : (
+                <Crosshair className="w-4 h-4 text-emerald-600" />
+              )}
+              <span>
+                {isLocating
+                  ? isAr ? 'جاري قراءة إحداثيات موقعك...' : 'Reading GPS coordinates...'
+                  : isAr ? 'استخدام موقعي الحالي الآن (GPS)' : 'Use My Current Location Now (GPS)'}
+              </span>
+            </button>
+          )}
 
           {/* Navigation Tabs */}
           <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
             <button
               type="button"
               onClick={() => setActiveTab('saved')}
-              className={`flex-1 py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${
-                activeTab === 'saved' ? 'bg-white shadow-xs text-navy-900 font-bold' : 'text-slate-500'
-              }`}
+              className={`flex-1 py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${activeTab === 'saved' ? 'bg-white shadow-xs text-navy-900 font-bold' : 'text-slate-500'
+                }`}
             >
               <Bookmark className="w-3.5 h-3.5" />
               <span>{isAr ? 'المحفوظة' : 'Saved'}</span>
@@ -286,9 +293,8 @@ export default function LocationPicker({
             <button
               type="button"
               onClick={() => setActiveTab('search')}
-              className={`flex-1 py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${
-                activeTab === 'search' ? 'bg-white shadow-xs text-navy-900 font-bold' : 'text-slate-500'
-              }`}
+              className={`flex-1 py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${activeTab === 'search' ? 'bg-white shadow-xs text-navy-900 font-bold' : 'text-slate-500'
+                }`}
             >
               <Search className="w-3.5 h-3.5" />
               <span>{isAr ? 'بحث بالاسم' : 'Search'}</span>
@@ -296,9 +302,8 @@ export default function LocationPicker({
             <button
               type="button"
               onClick={() => setActiveTab('link')}
-              className={`flex-1 py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${
-                activeTab === 'link' ? 'bg-white shadow-xs text-navy-900 font-bold' : 'text-slate-500'
-              }`}
+              className={`flex-1 py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${activeTab === 'link' ? 'bg-white shadow-xs text-navy-900 font-bold' : 'text-slate-500'
+                }`}
             >
               <Link2 className="w-3.5 h-3.5" />
               <span>{isAr ? 'رابط خريطة' : 'Paste Link'}</span>

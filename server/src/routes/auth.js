@@ -5,6 +5,7 @@ import { query, tx } from '../db.js';
 import { config } from '../config.js';
 import { AppError } from '../middleware/error.js';
 import { serializeUser } from '../serializers/user.js';
+import { notify } from '../services/notifications.js';
 
 const router = express.Router();
 
@@ -85,12 +86,33 @@ router.post('/signup/manufacturer', async (req, res, next) => {
 
       // 5. Notify admin of new pending signup
       const adminRes = await client.query(`SELECT id FROM users WHERE role = 'admin'`);
-      for (const admin of adminRes.rows) {
-        await client.query(
-          `INSERT INTO notifications (user_id, type, params, link)
-           VALUES ($1, 'signup_pending_admin', $2, '/admin/approvals')`,
-          [admin.id, JSON.stringify({ role: 'manufacturer', name })]
-        );
+      const adminIds = adminRes.rows.map((a) => a.id);
+      if (adminIds.length > 0) {
+        await notify({
+          client,
+          userIds: adminIds,
+          type: 'signup_pending_admin',
+          params: { role: 'manufacturer', name },
+          link: '/admin/approvals',
+          email: {
+            templateKey: 'NewSignupAdmin',
+            data: { role: 'manufacturer', name, email: primaryEmail, phone: primaryPhone, userId: newUser.id },
+          },
+        });
+      }
+
+      // 6. Notify new user that signup was received (email only per 07 §2)
+      if (primaryEmail) {
+        await notify({
+          client,
+          userIds: [newUser.id],
+          type: 'signup_received',
+          params: { role: 'manufacturer', name },
+          email: {
+            templateKey: 'SignupReceived',
+            data: { name, role: 'manufacturer', userId: newUser.id },
+          },
+        });
       }
 
       return newUser;
@@ -193,12 +215,33 @@ router.post('/signup/driver', async (req, res, next) => {
 
       // 4. Notify admin of new driver
       const adminRes = await client.query(`SELECT id FROM users WHERE role = 'admin'`);
-      for (const admin of adminRes.rows) {
-        await client.query(
-          `INSERT INTO notifications (user_id, type, params, link)
-           VALUES ($1, 'signup_pending_admin', $2, '/admin/approvals')`,
-          [admin.id, JSON.stringify({ role: 'driver', name })]
-        );
+      const adminIds = adminRes.rows.map((a) => a.id);
+      if (adminIds.length > 0) {
+        await notify({
+          client,
+          userIds: adminIds,
+          type: 'signup_pending_admin',
+          params: { role: 'driver', name },
+          link: '/admin/approvals',
+          email: {
+            templateKey: 'NewSignupAdmin',
+            data: { role: 'driver', name, email: primaryEmail, phone: primaryPhone, userId: newUser.id },
+          },
+        });
+      }
+
+      // 5. Notify new driver that signup was received (email only per 07 §2)
+      if (primaryEmail) {
+        await notify({
+          client,
+          userIds: [newUser.id],
+          type: 'signup_received',
+          params: { role: 'driver', name },
+          email: {
+            templateKey: 'SignupReceived',
+            data: { name, role: 'driver', userId: newUser.id },
+          },
+        });
       }
 
       return newUser;

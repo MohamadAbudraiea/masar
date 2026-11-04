@@ -28,3 +28,31 @@ This file tracks architectural and implementation decisions where specifications
 - **Strict Money Visibility**: Serializer layer in `server/src/serializers/ticket.js` strictly filters response payloads by viewer role. Manufacturers never receive `escrow_fee`, `masar_fee`, or `driver_net`. Unaccepted drivers see only `earnings` (driver net) and never total price, exact coordinates, or manufacturer identity.
 - **Escrow Payout Release**: On `audited` confirmation, three ledger entries are created atomically (`payout_driver`, `commission_masar`, `commission_escrow`), and a snapshot of driver payout info (IBAN/CliQ) is permanently preserved in entry details.
 - **Driver UX (PhoneFrame)**: Designed for 45+ demographic with high contrast, large bold numbers, prominent action buttons, direct `tel:` calls, and Google Maps deep-links.
+
+## 2026-11-04: Verification, Notifications & User Settings (Phase 4)
+- **Delivery Confirmation & SafePay Release**: Built two-step delivery verification. Driver marks `delivered` (instantly freeing driver for their next load). Manufacturer confirms receipt (`audited`), releasing escrow deposits and triggering ledger payout entries.
+- **Bilateral Ratings**: Shipper and Driver rate each other on completed shipments (1-5 stars with optional feedback text). Prevents duplicate ratings with compound uniqueness constraint `(ticket_id, from_user_id)`.
+- **In-App & Email Notifications**: Central notification engine in `server/src/services/notifications.js` dispatches in-app alerts and simulated emails using 23 distinct notification templates.
+- **Password & Profile Management**: Unified `/api/settings` and `/api/settings/password` endpoints allowing users to update contact details, additional phones/emails, payout IBAN/CliQ aliases, and change passwords with current password validation.
+
+## 2026-11-04: Dashboards, Reports & Exports (Phase 5)
+- **RFC 4180 CSV Serializer (`server/src/services/csv.js`)**: Generates UTF-8 with BOM (`\ufeff`) CSV files, ensuring Microsoft Excel on Windows renders Arabic text (names, cities, notes) flawlessly without encoding garble. Includes automatic RFC cell escaping for quotes, commas, and line breaks.
+- **Role-Shaped PDF Generator (`server/src/services/pdf.js`)**: Pure backend PDF generation using `pdfkit`. Restricts PDF output strictly by the viewer's role:
+  - Manufacturers: sees Total Price and SafePay deposit info only; never commissions or driver payout.
+  - Drivers: sees Driver Net Earnings only; never total price, Masar fee, or escrow commission.
+  - Admin & Escrow: includes complete financial breakdown and ledger audit trail.
+- **Reporting Engine (`/api/reports`)**:
+  - `GET /api/reports/manufacturer/overview`: KPIs (total spent, active shipments, completed), action strip, spending by month, category breakdown, top drivers.
+  - `GET /api/reports/manufacturer/payments`: Payment transactions ledger with date range filters and CSV export.
+  - `GET /api/reports/driver/earnings`: Earnings KPIs (all-time, this month, pending payouts, completed trips), monthly trend, payout account card (IBAN/CliQ), CSV export.
+  - `GET /api/reports/escrow/overview`: SafePay held funds vs released totals, commission revenues, daily cashflow trend.
+  - `GET /api/reports/escrow/held` & `/releases`: Held deposits by company/shipment and release payout ledger with driver banking info and CSV exports.
+  - `GET /api/reports/admin/overview`: Platform KPIs, active shipments map pins, live activity feed stream, newest shipments by status, top rated drivers and manufacturers.
+  - `GET /api/reports/admin/financial`: Daily/weekly/monthly revenue breakdowns, volume by shipper, and CSV export.
+- **Platform Directory & Direct Management (`/api/manufacturers`, `/api/drivers`, `/api/admin/ratings`)**:
+  - Admin can directly create pre-approved manufacturers and drivers with auto-generated secure temporary passwords dispatched via email.
+  - Admin truck editor allows updating driver plate numbers, body types, cooling system, and ADR hazmat certifications.
+  - Central ratings dashboard with star filters, reviewer/recipient role links, and review comments.
+- **Global Search (`/api/search?q=`)**: Role-scoped instantaneous multi-entity search bar in the desktop header returning top tickets, shippers, and drivers with direct navigation.
+- **URL-Synced Filter State (`useUrlFilters`)**: All table search queries, status tabs, date ranges, and pagination sync bidirectionally with URL query parameters (`?status=...&q=...&page=...`), preserving complete browser back/forward navigation history across all dashboards.
+

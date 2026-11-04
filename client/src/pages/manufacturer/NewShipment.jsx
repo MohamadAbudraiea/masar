@@ -24,6 +24,7 @@ import TruckSelector from '../../components/TruckSelector.jsx';
 import FileUpload from '../../components/FileUpload.jsx';
 import TruckLoader from '../../components/TruckLoader.jsx';
 import { formatMoney } from '../../lib/format.js';
+import { truckRows, bodyNames } from '../../constants/truckTypes.js';
 
 export default function NewShipment() {
   const { user } = useAuth();
@@ -57,8 +58,16 @@ export default function NewShipment() {
 
   // Required Truck
   const [requiredCategory, setRequiredCategory] = useState('heavy');
+  const [requiredTypeCode, setRequiredTypeCode] = useState('rigid');
   const [requiredBody, setRequiredBody] = useState('closed_box');
   const [requiredCooling, setRequiredCooling] = useState('');
+
+  const findTypeForCategoryAndBody = (cat, body) => {
+    const row = truckRows.find((r) => r[0] === cat && r[2] === body);
+    if (row) return row[1];
+    const first = truckRows.find((r) => r[0] === cat);
+    return first ? first[1] : '';
+  };
 
   // Conditional Fields
   const [isHazardous, setIsHazardous] = useState(false);
@@ -94,17 +103,18 @@ export default function NewShipment() {
           apiClient('/locations?kind=destination'),
         ]);
 
-        // Filter categories to manufacturer's permitted categories if present
+        // Filter categories to manufacturer's permitted categories if present, or all if not set
+        const allCats = Array.isArray(catsRes) ? catsRes : (catsRes?.items || []);
         const mCats = user?.profile?.goods_categories || [];
-        const allCats = catsRes.items || [];
         const availableCats =
           mCats.length > 0
-            ? allCats.filter((c) => mCats.includes(c.id))
+            ? allCats.filter((c) => mCats.some((mId) => String(mId) === String(c.id)))
             : allCats;
 
-        setCategories(availableCats);
-        if (availableCats.length > 0) {
-          setGoodsCategoryId(availableCats[0].id);
+        const finalCats = availableCats.length > 0 ? availableCats : allCats;
+        setCategories(finalCats);
+        if (finalCats.length > 0) {
+          setGoodsCategoryId(String(finalCats[0].id));
         }
 
         const pickups = pickupsRes.items || [];
@@ -154,10 +164,14 @@ export default function NewShipment() {
         if (!cancel && data.suggestions?.length > 0) {
           setSuggestions(data.suggestions);
           const top = data.suggestions[0];
+          const matchedType = findTypeForCategoryAndBody(top.category, top.body);
           setRequiredCategory(top.category);
+          setRequiredTypeCode(matchedType);
           setRequiredBody(top.body);
           if (top.cooling) {
             setRequiredCooling(top.cooling);
+          } else {
+            setRequiredCooling('');
           }
           if (data.unit) {
             setUnit(data.unit);
@@ -490,36 +504,71 @@ export default function NewShipment() {
               <span className="text-[11px] font-bold text-ink-muted shrink-0">
                 {isAr ? 'الاقتراحات:' : 'Suggested:'}
               </span>
-              {suggestions.map((s, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setRequiredCategory(s.category);
-                    setRequiredBody(s.body);
-                    if (s.cooling) setRequiredCooling(s.cooling);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl border text-xs font-semibold whitespace-nowrap transition-all ${
-                    requiredCategory === s.category && requiredBody === s.body
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold'
-                      : 'border-line bg-white hover:bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  {s.category} · {s.body} {s.cooling ? `(${s.cooling})` : ''}
-                </button>
-              ))}
+              {suggestions.map((s, idx) => {
+                const catLabel = isAr
+                  ? s.category === 'light'
+                    ? 'نقل خفيف'
+                    : s.category === 'medium'
+                    ? 'نقل متوسط'
+                    : s.category === 'heavy'
+                    ? 'نقل ثقيل'
+                    : 'صهريج'
+                  : s.category.charAt(0).toUpperCase() + s.category.slice(1);
+
+                const bodyLabel = bodyNames[s.body]?.[isAr ? 'ar' : 'en'] || s.body;
+
+                const coolingLabel = s.cooling
+                  ? isAr
+                    ? s.cooling === 'frozen'
+                      ? 'مجمّد'
+                      : 'مبرّد'
+                    : s.cooling === 'frozen'
+                    ? 'Frozen'
+                    : 'Chilled'
+                  : null;
+
+                const isSelected =
+                  requiredCategory === s.category &&
+                  requiredBody === s.body &&
+                  (!s.cooling || requiredCooling === s.cooling);
+
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      const matchedType = findTypeForCategoryAndBody(s.category, s.body);
+                      setRequiredCategory(s.category);
+                      setRequiredTypeCode(matchedType);
+                      setRequiredBody(s.body);
+                      setRequiredCooling(s.cooling || '');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-semibold whitespace-nowrap transition-all ${
+                      isSelected
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold'
+                        : 'border-line bg-white hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    {catLabel} · {bodyLabel}
+                    {coolingLabel ? ` (${coolingLabel})` : ''}
+                  </button>
+                );
+              })}
             </div>
           )}
 
           <TruckSelector
+            isShipmentForm={true}
             value={{
               category: requiredCategory,
-              body: requiredBody,
+              type_code: requiredTypeCode,
+              body_code: requiredBody,
               cooling: requiredCooling,
             }}
             onChange={(val) => {
-              setRequiredCategory(val.category);
-              setRequiredBody(val.body);
+              setRequiredCategory(val.category || '');
+              setRequiredTypeCode(val.type_code || '');
+              setRequiredBody(val.body_code || val.body || '');
               setRequiredCooling(val.cooling || '');
             }}
           />
@@ -559,9 +608,11 @@ export default function NewShipment() {
               )}
 
               <LocationPicker
+                kind="pickup"
+                showLocateMe={true}
                 value={pickupLocation}
                 onChange={setPickupLocation}
-                title={isAr ? 'تحديد موقع التحميل على الخريطة' : 'Set Pickup Location'}
+                title={isAr ? 'موقع التحميل (المصنع / المستودع)' : 'Pickup Location'}
               />
 
               <div className="grid grid-cols-1 gap-2 pt-2">
@@ -620,9 +671,11 @@ export default function NewShipment() {
               )}
 
               <LocationPicker
+                kind="destination"
+                showLocateMe={false}
                 value={destLocation}
                 onChange={setDestLocation}
-                title={isAr ? 'تحديد موقع التسليم' : 'Set Destination Location'}
+                title={isAr ? 'موقع التسليم' : 'Destination Location'}
               />
 
               <div className="grid grid-cols-2 gap-2 pt-2">

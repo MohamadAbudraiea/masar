@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../state/auth.jsx';
 import { setLanguage } from '../i18n/index.js';
+import NotificationBell from '../components/NotificationBell.jsx';
+import GlobalSearch from '../components/GlobalSearch.jsx';
 
 /**
  * Standard Desktop AppShell Layout (264px navy sidebar + 64px topbar).
@@ -131,10 +133,9 @@ export default function AppShell({ roleTitle, navItems = [], children }) {
               <Menu className="w-5 h-5" />
             </button>
 
-            {/* Global Search Bar Placeholder */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-line text-ink-muted text-xs w-64 md:w-80 cursor-pointer hover:border-slate-300">
-              <Search className="w-3.5 h-3.5 text-slate-400" />
-              <span>{isAr ? 'بحث سريع... (Ctrl+K)' : 'Search shipments... (Ctrl+K)'}</span>
+            {/* Global Search Bar */}
+            <div className="flex items-center">
+              <GlobalSearch />
             </div>
           </div>
 
@@ -150,15 +151,8 @@ export default function AppShell({ roleTitle, navItems = [], children }) {
               <span>{isAr ? 'English' : 'العربية'}</span>
             </button>
 
-            {/* Notification Bell Placeholder */}
-            <button
-              type="button"
-              className="p-2 rounded-xl border border-line hover:bg-surface text-navy-900 relative transition"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-amber-500" />
-            </button>
+            {/* Notification Bell */}
+            <NotificationBell />
           </div>
         </header>
 

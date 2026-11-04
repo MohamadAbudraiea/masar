@@ -13,6 +13,13 @@ import adminRouter from './routes/admin.js';
 import locationsRouter from './routes/locations.js';
 import ticketsRouter from './routes/tickets.js';
 import driverRouter from './routes/driver.js';
+import notificationsRouter from './routes/notifications.js';
+import settingsRouter from './routes/settings.js';
+import devEmailsRouter from './routes/devEmails.js';
+import reportsRouter from './routes/reports.js';
+import manufacturersRouter from './routes/manufacturers.js';
+import driversRouter from './routes/drivers.js';
+import searchRouter from './routes/search.js';
 
 const app = express();
 
@@ -42,6 +49,13 @@ app.use('/api/admin', adminRouter);
 app.use('/api/locations', locationsRouter);
 app.use('/api/tickets', ticketsRouter);
 app.use('/api/driver', driverRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/settings', settingsRouter);
+app.use('/api/dev/emails', devEmailsRouter);
+app.use('/api/reports', reportsRouter);
+app.use('/api/manufacturers', manufacturersRouter);
+app.use('/api/drivers', driversRouter);
+app.use('/api/search', searchRouter);
 
 // Central error handler
 app.use(errorHandler);

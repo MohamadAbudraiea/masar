@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../state/auth.jsx';
 import { setLanguage } from '../i18n/index.js';
 import PhoneFrame from '../components/PhoneFrame.jsx';
+import NotificationBell from '../components/NotificationBell.jsx';
 
 export default function DriverLayout() {
   const { user } = useAuth();
@@ -55,14 +56,7 @@ export default function DriverLayout() {
           </button>
 
           {/* Bell */}
-          <button
-            type="button"
-            onClick={() => navigate('/driver/notifications')}
-            className="p-2 rounded-xl bg-navy-800 text-slate-300 hover:text-amber-500 relative transition"
-          >
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-amber-500" />
-          </button>
+          <NotificationBell />
         </div>
       </header>
 

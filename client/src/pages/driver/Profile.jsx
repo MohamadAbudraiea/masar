@@ -11,6 +11,9 @@ import {
   Phone,
   Mail,
   Award,
+  History,
+  Settings,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../state/auth.jsx';
 import { setLanguage } from '../../i18n/index.js';
@@ -96,6 +99,33 @@ export default function DriverProfile() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Quick Links: History & Settings */}
+      <div className="bg-card rounded-2xl border border-line p-2 space-y-1">
+        <button
+          type="button"
+          onClick={() => navigate('/driver/history')}
+          className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-surface text-xs font-semibold text-navy-900 transition"
+        >
+          <div className="flex items-center gap-2.5">
+            <History className="w-4 h-4 text-navy-700" />
+            <span>{isAr ? 'سجل الرحلات المكتملة' : 'Completed Trips History'}</span>
+          </div>
+          <ChevronRight className="w-4 h-4 text-ink-muted rtl:rotate-180" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/driver/settings')}
+          className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-surface text-xs font-semibold text-navy-900 transition"
+        >
+          <div className="flex items-center gap-2.5">
+            <Settings className="w-4 h-4 text-navy-700" />
+            <span>{isAr ? 'إعدادات الحساب والإشعارات' : 'Settings & Notifications'}</span>
+          </div>
+          <ChevronRight className="w-4 h-4 text-ink-muted rtl:rotate-180" />
+        </button>
       </div>
 
       {/* Language & Settings */}

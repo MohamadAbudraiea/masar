@@ -236,5 +236,45 @@ router.post('/password', async (req, res, next) => {
   }
 });
 
+/**
+ * GET /api/me/drivers
+ * Returns drivers that worked on this manufacturer's shipments with trip counts and ratings.
+ */
+router.get('/drivers', async (req, res, next) => {
+  try {
+    if (req.user.role !== 'manufacturer') {
+      throw new AppError('FORBIDDEN', 'Only manufacturers can access my drivers', 403);
+    }
+
+    const sql = `
+      SELECT
+        d.id,
+        d.name,
+        d.phone,
+        COALESCE(urs.avg_stars, 0)::numeric(3,1) AS avg_rating,
+        COALESCE(urs.ratings_count, 0)::int AS ratings_count,
+        COUNT(t.id)::int AS trips_count,
+        trk.plate_number,
+        trk.photo_keys,
+        tt.type_name_en,
+        tt.body_name_en,
+        tt.category AS truck_category
+      FROM tickets t
+      JOIN users d ON d.id = t.driver_id
+      LEFT JOIN user_rating_stats urs ON urs.user_id = d.id
+      LEFT JOIN trucks trk ON trk.driver_id = d.id
+      LEFT JOIN truck_types tt ON tt.id = trk.truck_type_id
+      WHERE t.manufacturer_id = $1 AND t.driver_id IS NOT NULL
+      GROUP BY d.id, d.name, d.phone, urs.avg_stars, urs.ratings_count, trk.plate_number, trk.photo_keys, tt.type_name_en, tt.body_name_en, tt.category
+      ORDER BY trips_count DESC, d.name ASC
+    `;
+
+    const result = await query(sql, [req.user.id]);
+    res.json({ items: result.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
 
