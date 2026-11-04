@@ -11,6 +11,7 @@ import {
   Crosshair,
 } from 'lucide-react';
 import { apiClient } from '../api/client.js';
+import { useToast } from '../state/toast.jsx';
 
 /**
  * 5-in-1 Location Picker component:
@@ -36,6 +37,7 @@ export default function LocationPicker({
   showLocateMe,
 }) {
   const { i18n } = useTranslation();
+  const toast = useToast();
   const isAr = i18n.language === 'ar';
   const canLocateMe = showLocateMe !== undefined ? showLocateMe : kind !== 'destination';
 
@@ -52,7 +54,7 @@ export default function LocationPicker({
   // 1. Locate Me using Browser Geolocation
   function handleLocateMe() {
     if (!navigator.geolocation) {
-      alert(
+      toast.error(
         isAr
           ? 'المتصفح لا يدعم تحديد الموقع الجغرافي (Geolocation).'
           : 'Geolocation is not supported by your browser.'
@@ -86,7 +88,7 @@ export default function LocationPicker({
           });
         } catch (err) {
           console.error('Failed to process geolocation:', err);
-          alert(isAr ? 'حدث خطأ أثناء تحديد الموقع' : 'Failed to retrieve location details');
+          toast.error(isAr ? 'حدث خطأ أثناء تحديد الموقع' : 'Failed to retrieve location details');
         } finally {
           setIsLocating(false);
         }
@@ -95,13 +97,13 @@ export default function LocationPicker({
         setIsLocating(false);
         console.warn('Geolocation error:', err.message);
         if (err.code === 1) {
-          alert(
+          toast.error(
             isAr
               ? 'يرجى السماح بصلاحية الوصول إلى الموقع في المتصفح لتحديد موقعك تلقائياً.'
               : 'Please allow location permission in your browser to detect your current position.'
           );
         } else {
-          alert(
+          toast.error(
             isAr
               ? 'تعذر تحديد الموقع الجغرافي. يرجى تجربة البحث بالاسم أو الرابط.'
               : 'Unable to detect position. Please use name search or Google Maps link.'
@@ -160,7 +162,7 @@ export default function LocationPicker({
       }
     } catch (err) {
       console.error('Failed to resolve link:', err);
-      alert(isAr ? 'تعذر استخراج الإحداثيات من هذا الرابط' : 'Could not resolve location from this link');
+      toast.error(isAr ? 'تعذر استخراج الإحداثيات من هذا الرابط' : 'Could not resolve location from this link');
     } finally {
       setIsResolvingLink(false);
     }

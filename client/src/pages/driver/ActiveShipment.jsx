@@ -16,13 +16,16 @@ import {
   User,
 } from 'lucide-react';
 import { apiClient } from '../../api/client.js';
+import { useToast } from '../../state/toast.jsx';
 import StatusChip from '../../components/StatusChip.jsx';
 import TruckLoader from '../../components/TruckLoader.jsx';
+import ConfirmModal from '../../components/ConfirmModal.jsx';
 import { formatDateTime } from '../../lib/time.js';
 import { formatMoney } from '../../lib/format.js';
 
 export default function ActiveShipment() {
   const navigate = useNavigate();
+  const toast = useToast();
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
 
@@ -30,6 +33,7 @@ export default function ActiveShipment() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showDeliveredModal, setShowDeliveredModal] = useState(false);
 
   const fetchActive = async () => {
     try {
@@ -54,32 +58,25 @@ export default function ActiveShipment() {
     try {
       setActionLoading(true);
       await apiClient(`/tickets/${ticket.id}/arrived`, { method: 'POST' });
+      toast.success(isAr ? 'تم تسجيل وصولك إلى موقع التحميل' : 'Arrived at pickup reported');
       await fetchActive();
     } catch (err) {
-      alert(err.message || 'Failed to report arrival');
+      toast.error(err.message || 'Failed to report arrival');
     } finally {
       setActionLoading(false);
     }
   };
 
   // Mark delivered at destination
-  const handleDelivered = async () => {
-    if (
-      !window.confirm(
-        isAr
-          ? 'هل تؤكد تسليم كامل الشحنة إلى المستلم؟ ستصبح متاحاً فوراً لتلقي شحنات جديدة وسيتم تحويل أرباحك بعد تأكيد المصنع.'
-          : 'Confirm full delivery to recipient? You will immediately become free for new trips and earnings will be released upon confirmation.'
-      )
-    ) {
-      return;
-    }
+  const handleConfirmDelivered = async () => {
     try {
       setActionLoading(true);
       await apiClient(`/tickets/${ticket.id}/delivered`, { method: 'POST' });
-      alert(isAr ? 'تم تسجيل التسليم بنجاح! أحسنت عملاً.' : 'Delivery confirmed! Great work.');
+      toast.success(isAr ? 'تم تسجيل التسليم بنجاح! أحسنت عملاً.' : 'Delivery confirmed! Great work.');
+      setShowDeliveredModal(false);
       navigate('/driver');
     } catch (err) {
-      alert(err.message || 'Failed to report delivery');
+      toast.error(err.message || 'Failed to report delivery');
     } finally {
       setActionLoading(false);
     }
@@ -287,7 +284,7 @@ export default function ActiveShipment() {
           <button
             type="button"
             disabled={actionLoading}
-            onClick={handleDelivered}
+            onClick={() => setShowDeliveredModal(true)}
             className="w-full py-4 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-base font-black shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
             <CheckCircle className="w-5 h-5 stroke-[2.5]" />
@@ -299,6 +296,44 @@ export default function ActiveShipment() {
           </button>
         )}
       </div>
+
+      {/* Delivered Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeliveredModal}
+        onClose={() => setShowDeliveredModal(false)}
+        onConfirm={handleConfirmDelivered}
+        loading={actionLoading}
+        variant="primary"
+        title={isAr ? 'تأكيد إتمام التسليم' : 'Confirm Full Delivery'}
+        description={
+          isAr
+            ? 'هل تؤكد تسليم كامل الشحنة إلى المستلم بسلامة؟'
+            : 'Confirm that goods were delivered to the recipient in good condition?'
+        }
+        confirmText={isAr ? 'نعم، تأكيد التسليم' : 'Yes, Confirm Delivery'}
+        cancelText={isAr ? 'تراجع' : 'Cancel'}
+      >
+        <div className="space-y-3">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-line space-y-2 text-xs">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-navy-800">
+              {isAr ? 'وجهة التسليم والمستلم' : 'Destination & Recipient'}
+            </div>
+            <div className="font-semibold text-navy-900">{ticket.dest?.address}</div>
+            <div className="text-slate-600">
+              <span>{ticket.dest?.dest_name}</span>
+              {ticket.dest?.dest_phone && (
+                <span className="ms-2 font-mono text-emerald-700">({ticket.dest?.dest_phone})</span>
+              )}
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 leading-relaxed">
+            {isAr
+              ? 'فور تأكيد التسليم، ستصبح متاحاً لتلقي طلبات جديدة وسيتم تحويل أرباحك فور تأكيد المصنع.'
+              : 'You will immediately become available for new jobs, and your earnings will be released upon manufacturer confirmation.'}
+          </div>
+        </div>
+      </ConfirmModal>
     </div>
   );
 }

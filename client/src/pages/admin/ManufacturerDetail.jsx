@@ -19,6 +19,8 @@ import PdfViewer from '../../components/PdfViewer.jsx';
 import StatusChip from '../../components/StatusChip.jsx';
 import DataTable from '../../components/DataTable.jsx';
 import TruckLoader from '../../components/TruckLoader.jsx';
+import ConfirmModal from '../../components/ConfirmModal.jsx';
+import { useToast } from '../../state/toast.jsx';
 import { formatDateTime } from '../../lib/time.js';
 import { formatMoney } from '../../lib/format.js';
 import { linkTo } from '../../lib/links.js';
@@ -26,6 +28,7 @@ import { linkTo } from '../../lib/links.js';
 export default function AdminManufacturerDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
 
@@ -34,6 +37,7 @@ export default function AdminManufacturerDetail() {
   const [ratings, setRatings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [resetResult, setResetResult] = useState(null);
 
   const loadData = async () => {
@@ -58,16 +62,15 @@ export default function AdminManufacturerDetail() {
     loadData();
   }, [id]);
 
-  const handleResetPassword = async () => {
-    if (!confirm(isAr ? 'هل أنت متأكد من إعادة تعيين كلمة المرور لهذا المصنع؟' : 'Reset password for this manufacturer?')) {
-      return;
-    }
+  const handleConfirmResetPassword = async () => {
     try {
       setResetting(true);
       const res = await apiClient(`/admin/users/${id}/reset-password`, { method: 'POST' });
       setResetResult(res.temp_password);
+      setShowResetModal(false);
+      toast.success(isAr ? 'تم إنشاء كلمة مرور مؤقتة بنجاح' : 'Temporary password generated');
     } catch (err) {
-      alert(err.message || 'Failed to reset password');
+      toast.error(err.message || 'Failed to reset password');
     } finally {
       setResetting(false);
     }
@@ -168,7 +171,7 @@ export default function AdminManufacturerDetail() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={handleResetPassword}
+              onClick={() => setShowResetModal(true)}
               disabled={resetting}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-line bg-card hover:bg-surface text-xs font-bold text-navy-900 shadow-2xs transition"
             >
@@ -255,6 +258,22 @@ export default function AdminManufacturerDetail() {
           emptyMessage={isAr ? 'لا توجد شحنات مسجلة لهذا المصنع' : 'No shipments created by this manufacturer.'}
         />
       </div>
+      {/* Reset Password Modal */}
+      <ConfirmModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={handleConfirmResetPassword}
+        loading={resetting}
+        variant="warning"
+        title={isAr ? 'إعادة تعيين كلمة المرور' : 'Reset Manufacturer Password'}
+        description={
+          isAr
+            ? `هل أنت متأكد من رغبتك في توليد كلمة مرور مؤقتة للمصنع ${company?.name}؟`
+            : `Are you sure you want to generate a new temporary password for manufacturer ${company?.name}?`
+        }
+        confirmText={isAr ? 'تأكيد التعيين' : 'Confirm Reset'}
+        cancelText={isAr ? 'إلغاء' : 'Cancel'}
+      />
     </div>
   );
 }

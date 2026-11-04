@@ -24,7 +24,45 @@ import searchRouter from './routes/search.js';
 const app = express();
 
 app.set('trust proxy', true);
-app.use(cors({ origin: '*' }));
+
+// CORS configuration for production domains (*.vydo.tech) and local development
+const allowedOrigins = new Set([
+  'https://masar.vydo.tech',
+  'http://masar.vydo.tech',
+  'https://api-masar.vydo.tech',
+  'http://api-masar.vydo.tech',
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  ...(config.corsOrigins || []),
+]);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      // Check allowed list, *.vydo.tech domains, and localhost
+      if (
+        allowedOrigins.has(origin) ||
+        origin.endsWith('.vydo.tech') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1')
+      ) {
+        return callback(null, true);
+      }
+
+      callback(new Error(`CORS error: Origin ${origin} not permitted`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Content-Disposition'],
+  })
+);
+
 app.use(express.json());
 app.use(morgan('dev'));
 

@@ -9,9 +9,11 @@ import DataTable from '../../components/DataTable.jsx';
 import { formatDateTime } from '../../lib/time.js';
 import { formatMoney } from '../../lib/format.js';
 import { linkTo } from '../../lib/links.js';
+import { useToast } from '../../state/toast.jsx';
 
 export default function AdminDrivers() {
   const navigate = useNavigate();
+  const toast = useToast();
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
 
@@ -77,9 +79,10 @@ export default function AdminDrivers() {
         }),
       });
       setCreatedResult(res);
+      toast.success(isAr ? 'تم إنشاء حساب السائق بنجاح' : 'Driver created successfully');
       fetchDrivers();
     } catch (err) {
-      alert(err.message || 'Failed to create driver');
+      toast.error(err.message || 'Failed to create driver');
     } finally {
       setCreating(false);
     }

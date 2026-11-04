@@ -16,12 +16,15 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../api/client.js';
 import { useAuth } from '../../state/auth.jsx';
+import { useToast } from '../../state/toast.jsx';
 import TruckLoader from '../../components/TruckLoader.jsx';
+import ConfirmModal from '../../components/ConfirmModal.jsx';
 import { formatDateTime } from '../../lib/time.js';
 import { formatMoney } from '../../lib/format.js';
 
 export default function DriverShipments() {
   const { user } = useAuth();
+  const toast = useToast();
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
   const navigate = useNavigate();
@@ -31,6 +34,8 @@ export default function DriverShipments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [acceptingId, setAcceptingId] = useState(null);
+  const [acceptModalTicket, setAcceptModalTicket] = useState(null);
+  const [busyModalOpen, setBusyModalOpen] = useState(false);
 
   const loadData = async () => {
     try {
@@ -54,32 +59,30 @@ export default function DriverShipments() {
     loadData();
   }, []);
 
-  const handleAccept = async (ticket) => {
+  const handleAcceptClick = (ticket) => {
     if (!ticket.can_accept) {
-      alert(
-        isAr
-          ? 'لديك شحنة نشطة قيد التنفيذ حالياً. أكمل شحنتك أولاً.'
-          : 'You already have an active shipment. Complete it first.'
-      );
+      setBusyModalOpen(true);
       return;
     }
+    setAcceptModalTicket(ticket);
+  };
 
-    if (
-      !window.confirm(
-        isAr
-          ? `هل ترغب بقبول هذه الشحنة؟ ستحصل على صافي أرباح ${ticket.earnings} د.أ`
-          : `Accept this shipment? Your net earnings will be ${ticket.earnings} JD`
-      )
-    ) {
-      return;
-    }
-
+  const handleConfirmAccept = async () => {
+    if (!acceptModalTicket) return;
+    const ticketId = acceptModalTicket.id;
     try {
-      setAcceptingId(ticket.id);
-      await apiClient(`/tickets/${ticket.id}/accept`, { method: 'POST' });
+      setAcceptingId(ticketId);
+      await apiClient(`/tickets/${ticketId}/accept`, { method: 'POST' });
+      toast.success(
+        isAr
+          ? 'تم قبول الشحنة بنجاح! انتقلت الشحنة إلى قائمة مهامك.'
+          : 'Shipment accepted successfully! Added to your active trip.'
+      );
+      setAcceptModalTicket(null);
       navigate('/driver/active');
     } catch (err) {
-      alert(err.message || 'Failed to accept shipment');
+      toast.error(err.message || 'Failed to accept shipment');
+      setAcceptModalTicket(null);
       await loadData();
     } finally {
       setAcceptingId(null);
@@ -102,7 +105,7 @@ export default function DriverShipments() {
             </div>
             <div className="text-[11px] text-ink-muted">
               {user?.profile?.truck
-                ? `${user.profile.truck.type_name} · ${user.profile.truck.body_name} (${user.profile.truck.plate_number})`
+                ? `${user.profile.truck.type_name || user.profile.truck.type || ''} · ${user.profile.truck.body_name || user.profile.truck.body || ''} (${user.profile.truck.plate_number})`
                 : isAr ? 'نقل متوسط (براد)' : 'Medium / Refrigerated'}
             </div>
           </div>
@@ -262,12 +265,12 @@ export default function DriverShipments() {
               <div className="pt-2">
                 <button
                   type="button"
-                  disabled={!ticket.can_accept || acceptingId === ticket.id}
-                  onClick={() => handleAccept(ticket)}
+                  disabled={acceptingId === ticket.id}
+                  onClick={() => handleAcceptClick(ticket)}
                   className={`w-full py-3.5 px-4 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-xs ${
                     ticket.can_accept
                       ? 'bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white'
-                      : 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                      : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
                   }`}
                 >
                   <CheckCircle className="w-5 h-5" />
@@ -284,6 +287,88 @@ export default function DriverShipments() {
           ))}
         </div>
       )}
+
+      {/* Accept Shipment Confirmation Modal Popup */}
+      <ConfirmModal
+        isOpen={!!acceptModalTicket}
+        onClose={() => setAcceptModalTicket(null)}
+        onConfirm={handleConfirmAccept}
+        loading={acceptingId === acceptModalTicket?.id}
+        variant="primary"
+        title={isAr ? 'تأكيد قبول الشحنة' : 'Confirm Accept Shipment'}
+        description={
+          isAr
+            ? `يرجى مراجعة تفاصيل الشحنة قبل تأكيد استلام أمر النقل.`
+            : `Review shipment details before accepting the freight order.`
+        }
+        confirmText={isAr ? 'تأكيد وقبول الشحنة' : 'Confirm & Accept'}
+        cancelText={isAr ? 'تراجع' : 'Cancel'}
+      >
+        {acceptModalTicket && (
+          <div className="space-y-3">
+            {/* Route & Cargo Card */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-line space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-bold text-slate-400 text-[11px]">
+                  {acceptModalTicket.ticket_number}
+                </span>
+                {acceptModalTicket.distance_km && (
+                  <span className="font-mono font-semibold text-slate-600 text-[11px]">
+                    {acceptModalTicket.distance_km} km
+                  </span>
+                )}
+              </div>
+
+              <div className="text-sm font-black text-navy-900 flex items-center gap-2">
+                <span>{acceptModalTicket.pickup?.city || 'Amman'}</span>
+                <ArrowRight className="w-4 h-4 text-slate-400 rtl:rotate-180 shrink-0" />
+                <span>{acceptModalTicket.dest?.city || 'Zarqa'}</span>
+              </div>
+
+              <div className="text-[11px] text-ink-muted flex items-center justify-between pt-1 border-t border-line/60">
+                <span>{acceptModalTicket.goods?.category_name}</span>
+                <span className="font-mono font-bold text-navy-900">
+                  {acceptModalTicket.goods?.quantity} {acceptModalTicket.goods?.unit}
+                </span>
+              </div>
+            </div>
+
+            {/* Guaranteed Earnings Box */}
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 block">
+                {isAr ? 'صافي أرباحك المضمونة' : 'Your Guaranteed Net Earnings'}
+              </span>
+              <div className="text-2xl font-black font-mono text-emerald-700">
+                {formatMoney(acceptModalTicket.earnings)}
+              </div>
+              <p className="text-[11px] text-emerald-900 font-medium pt-1">
+                {isAr
+                  ? 'المبلغ مودع مسبقاً في حساب سيف باي وسيتم تحويله لحسابك البنكي فور التسليم.'
+                  : 'Funds are secured in SafePay Escrow and automatically released to your bank upon delivery.'}
+              </p>
+            </div>
+          </div>
+        )}
+      </ConfirmModal>
+
+      {/* Driver Busy Notice Modal Popup */}
+      <ConfirmModal
+        isOpen={busyModalOpen}
+        onClose={() => setBusyModalOpen(false)}
+        onConfirm={() => {
+          setBusyModalOpen(false);
+          navigate('/driver/active');
+        }}
+        variant="warning"
+        title={isAr ? 'لديك شحنة نشطة قيد التنفيذ' : 'Active Shipment in Progress'}
+        description={
+          isAr
+            ? 'تلتزم منصة مسار بقاعدة (شحنة واحدة لكل سائق) لضمان أعلى مستويات الالتزام بالمواعيد. يرجى إتمام وتأكيد تسليم شحنتك الحالية قبل قبول شحنة جديدة.'
+            : 'Masar enforces one active trip per driver to ensure maximum punctuality. Please complete your current shipment before accepting a new one.'
+        }
+        confirmText={isAr ? 'عرض الشحنة النشطة' : 'View Active Shipment'}
+        cancelText={isAr ? 'إغلاق' : 'Close'}
+      />
     </div>
   );
 }

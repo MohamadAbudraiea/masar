@@ -21,15 +21,18 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { apiClient } from '../../api/client.js';
+import { useToast } from '../../state/toast.jsx';
 import Timeline from '../../components/Timeline.jsx';
 import StatusChip from '../../components/StatusChip.jsx';
 import TruckLoader from '../../components/TruckLoader.jsx';
+import ConfirmModal from '../../components/ConfirmModal.jsx';
 import { formatDateTime } from '../../lib/time.js';
 import { formatMoney } from '../../lib/format.js';
 
 export default function ShipmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
 
@@ -40,6 +43,8 @@ export default function ShipmentDetail() {
 
   // Modals
   const [showPayModal, setShowPayModal] = useState(false);
+  const [showConfirmDeliveryModal, setShowConfirmDeliveryModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingStars, setRatingStars] = useState(5);
   const [ratingComment, setRatingComment] = useState('');
@@ -68,9 +73,10 @@ export default function ShipmentDetail() {
       setActionLoading(true);
       await apiClient(`/tickets/${id}/pay`, { method: 'POST' });
       setShowPayModal(false);
+      toast.success(isAr ? 'تم إيداع الدفعة في حساب سيف باي بنجاح' : 'SafePay escrow deposit completed');
       await fetchTicket();
     } catch (err) {
-      alert(err.message || 'Payment failed');
+      toast.error(err.message || 'Payment failed');
     } finally {
       setActionLoading(false);
     }
@@ -81,9 +87,10 @@ export default function ShipmentDetail() {
     try {
       setActionLoading(true);
       await apiClient(`/tickets/${id}/loaded`, { method: 'POST' });
+      toast.success(isAr ? 'تم تأكيد تحميل البضاعة بنجاح' : 'Goods loading confirmed');
       await fetchTicket();
     } catch (err) {
-      alert(err.message || 'Failed to confirm loading');
+      toast.error(err.message || 'Failed to confirm loading');
     } finally {
       setActionLoading(false);
     }
@@ -91,22 +98,19 @@ export default function ShipmentDetail() {
 
   // Confirm Delivery & Release Escrow Handler
   const handleConfirm = async () => {
-    if (
-      !window.confirm(
-        isAr
-          ? 'هل تؤكد استلام الشحنة بسلامة؟ سيتم تحويل مستحقات السائق من حساب سيف باي فوراً.'
-          : 'Confirm that shipment was received in good order? Escrow payout will be released to driver.'
-      )
-    ) {
-      return;
-    }
     try {
       setActionLoading(true);
       await apiClient(`/tickets/${id}/confirm`, { method: 'POST' });
+      setShowConfirmDeliveryModal(false);
+      toast.success(
+        isAr
+          ? 'تم تأكيد الاستلام وتحويل مستحقات السائق من حساب سيف باي بنجاح!'
+          : 'Delivery confirmed and SafePay escrow payout released to driver!'
+      );
       await fetchTicket();
       setShowRatingModal(true);
     } catch (err) {
-      alert(err.message || 'Failed to confirm delivery');
+      toast.error(err.message || 'Failed to confirm delivery');
     } finally {
       setActionLoading(false);
     }
@@ -125,9 +129,10 @@ export default function ShipmentDetail() {
         }),
       });
       setShowRatingModal(false);
+      toast.success(isAr ? 'شكراً لك! تم تسجيل تقييمك بنجاح' : 'Thank you! Rating submitted');
       await fetchTicket();
     } catch (err) {
-      alert(err.message || 'Failed to submit rating');
+      toast.error(err.message || 'Failed to submit rating');
     } finally {
       setActionLoading(false);
     }
@@ -135,13 +140,14 @@ export default function ShipmentDetail() {
 
   // Delete Shipment
   const handleDelete = async () => {
-    if (!window.confirm(isAr ? 'هل أنت متأكد من حذف هذه الشحنة؟' : 'Delete this shipment?')) return;
     try {
       setActionLoading(true);
       await apiClient(`/tickets/${id}`, { method: 'DELETE' });
+      setShowDeleteModal(false);
+      toast.success(isAr ? 'تم حذف الشحنة بنجاح' : 'Shipment deleted');
       navigate('/manufacturer');
     } catch (err) {
-      alert(err.message || 'Failed to delete');
+      toast.error(err.message || 'Failed to delete');
     } finally {
       setActionLoading(false);
     }
@@ -201,7 +207,7 @@ export default function ShipmentDetail() {
           {ticket.status === 'requested' && (
             <>
               <button
-                onClick={handleDelete}
+                onClick={() => setShowDeleteModal(true)}
                 disabled={actionLoading}
                 className="px-3 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold"
               >
@@ -232,7 +238,7 @@ export default function ShipmentDetail() {
 
           {ticket.status === 'delivered' && (
             <button
-              onClick={handleConfirm}
+              onClick={() => setShowConfirmDeliveryModal(true)}
               disabled={actionLoading}
               className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
             >
@@ -597,6 +603,51 @@ export default function ShipmentDetail() {
           </div>
         </div>
       )}
+      {/* Confirm Delivery & Release Escrow Modal */}
+      <ConfirmModal
+        isOpen={showConfirmDeliveryModal}
+        onClose={() => setShowConfirmDeliveryModal(false)}
+        onConfirm={handleConfirm}
+        loading={actionLoading}
+        variant="primary"
+        title={isAr ? 'تأكيد استلام الشحنة وإطلاق الأرباح' : 'Confirm Delivery & Release Escrow'}
+        description={
+          isAr
+            ? 'هل تؤكد استلام كامل الشحنة بحالة سليمة ومطابقة للمواصفات المطلوبة؟'
+            : 'Confirm that shipment was received in good order? SafePay escrow payout will be released to driver.'
+        }
+        confirmText={isAr ? 'تأكيد الاستلام وتحويل الأرباح' : 'Confirm & Release Payout'}
+        cancelText={isAr ? 'إلغاء' : 'Cancel'}
+      >
+        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1">
+          <div className="font-bold flex items-center justify-between">
+            <span>{isAr ? 'المبلغ المحرر من سيف باي:' : 'Amount Released from Escrow:'}</span>
+            <span className="font-mono text-emerald-800 font-black">{formatMoney(ticket.price)}</span>
+          </div>
+          <p className="text-[11px] text-emerald-800/90 leading-relaxed pt-1">
+            {isAr
+              ? 'سيتم تحويل مستحقات السائق البنكية فوراً واقتطاع عمولة الخدمة المعتمدة.'
+              : 'Driver payout is transferred immediately to their bank account and platform fees are settled.'}
+          </p>
+        </div>
+      </ConfirmModal>
+
+      {/* Delete Shipment Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        loading={actionLoading}
+        variant="danger"
+        title={isAr ? 'حذف الشحنة' : 'Delete Shipment'}
+        description={
+          isAr
+            ? `هل أنت متأكد من رغبتك في حذف الشحنة رقم ${ticket.ticket_number}؟ لا يمكن التراجع عن هذا الإجراء.`
+            : `Are you sure you want to delete shipment ${ticket.ticket_number}? This action cannot be undone.`
+        }
+        confirmText={isAr ? 'نعم، حذف الشحنة' : 'Yes, Delete'}
+        cancelText={isAr ? 'إلغاء' : 'Cancel'}
+      />
     </div>
   );
 }

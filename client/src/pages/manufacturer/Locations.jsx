@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Plus, Trash2, Check, Star, Navigation } from 'lucide-react';
 import { apiClient } from '../../api/client.js';
+import { useToast } from '../../state/toast.jsx';
 import LocationPicker from '../../components/LocationPicker.jsx';
 import TruckLoader from '../../components/TruckLoader.jsx';
+import ConfirmModal from '../../components/ConfirmModal.jsx';
 
 export default function ManufacturerLocations() {
   const { i18n } = useTranslation();
+  const toast = useToast();
   const isAr = i18n.language === 'ar';
 
   const [kind, setKind] = useState('pickup'); // 'pickup' | 'destination'
@@ -15,6 +18,8 @@ export default function ManufacturerLocations() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newLocation, setNewLocation] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deletingLocationId, setDeletingLocationId] = useState(null);
+  const [deletingLoading, setDeletingLoading] = useState(false);
 
   const fetchLocations = async () => {
     try {
@@ -44,15 +49,19 @@ export default function ManufacturerLocations() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm(isAr ? 'هل أنت متأكد من حذف هذا العنوان؟' : 'Are you sure you want to delete this location?')) {
-      return;
-    }
+  const confirmDeleteLocation = async () => {
+    if (!deletingLocationId) return;
     try {
-      await apiClient(`/locations/${id}`, { method: 'DELETE' });
+      setDeletingLoading(true);
+      await apiClient(`/locations/${deletingLocationId}`, { method: 'DELETE' });
+      toast.success(isAr ? 'تم حذف العنوان بنجاح' : 'Location deleted');
+      setDeletingLocationId(null);
       fetchLocations();
     } catch (err) {
       console.error('Failed to delete location:', err);
+      toast.error(err.message || 'Failed to delete location');
+    } finally {
+      setDeletingLoading(false);
     }
   };
 
@@ -206,7 +215,7 @@ export default function ManufacturerLocations() {
                 )}
 
                 <button
-                  onClick={() => handleDelete(loc.id)}
+                  onClick={() => setDeletingLocationId(loc.id)}
                   className="text-rose-500 hover:text-rose-700 p-1 rounded transition"
                   title={isAr ? 'حذف' : 'Delete'}
                 >
@@ -309,6 +318,22 @@ export default function ManufacturerLocations() {
           </div>
         </div>
       )}
+      {/* Delete Location Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deletingLocationId}
+        onClose={() => setDeletingLocationId(null)}
+        onConfirm={confirmDeleteLocation}
+        loading={deletingLoading}
+        variant="danger"
+        title={isAr ? 'حذف العنوان المحفوظ' : 'Delete Saved Location'}
+        description={
+          isAr
+            ? 'هل أنت متأكد من رغبتك في حذف هذا العنوان من قائمة العناوين المحفوظة لديك؟'
+            : 'Are you sure you want to remove this location from your saved addresses?'
+        }
+        confirmText={isAr ? 'نعم، حذف' : 'Yes, Delete'}
+        cancelText={isAr ? 'إلغاء' : 'Cancel'}
+      />
     </div>
   );
 }

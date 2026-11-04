@@ -81,6 +81,8 @@ export function serializeDriverProfile(d, viewerRole, { isOwn = false } = {}) {
           category: d.truck.category,
           type: d.truck.type_name,
           body: d.truck.body_name,
+          type_name: d.truck.type_name,
+          body_name: d.truck.body_name,
           plate_number: d.truck.plate_number,
           cooling: d.truck.cooling || null,
           adr_certified: !!d.truck.adr_certified,

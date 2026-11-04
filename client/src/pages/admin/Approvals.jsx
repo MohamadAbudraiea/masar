@@ -23,9 +23,11 @@ import { apiClient } from '../../api/client.js';
 import { formatDateTime } from '../../lib/time.js';
 import PdfViewer from '../../components/PdfViewer.jsx';
 import TruckLoader from '../../components/TruckLoader.jsx';
+import { useToast } from '../../state/toast.jsx';
 
 export default function AdminApprovals() {
   const { i18n } = useTranslation();
+  const toast = useToast();
   const isAr = i18n.language === 'ar';
 
   const [activeTab, setActiveTab] = useState('manufacturer'); // 'manufacturer' | 'driver'
@@ -82,7 +84,7 @@ export default function AdminApprovals() {
       setSelectedUser(null);
       await fetchApprovals();
     } catch (err) {
-      alert(err.message || 'Failed to approve application');
+      toast.error(err.message || 'Failed to approve application');
     } finally {
       setActionLoading(false);
     }
@@ -91,7 +93,7 @@ export default function AdminApprovals() {
   const handleReject = async (e) => {
     e.preventDefault();
     if (!rejectReason.trim()) {
-      alert(isAr ? 'يرجى كتابة سبب الرفض' : 'Please provide a rejection reason');
+      toast.error(isAr ? 'يرجى كتابة سبب الرفض' : 'Please provide a rejection reason');
       return;
     }
     try {
@@ -111,7 +113,7 @@ export default function AdminApprovals() {
       setSelectedUser(null);
       await fetchApprovals();
     } catch (err) {
-      alert(err.message || 'Failed to reject application');
+      toast.error(err.message || 'Failed to reject application');
     } finally {
       setActionLoading(false);
     }

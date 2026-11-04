@@ -5,7 +5,19 @@ export const config = {
   timezone: process.env.TZ || 'Asia/Amman',
   databaseUrl: process.env.DATABASE_URL || '',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-key-change-in-production',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  frontendUrl: process.env.FRONTEND_URL || 'https://masar.vydo.tech',
+  corsOrigins: process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean)
+    : [
+        'https://masar.vydo.tech',
+        'http://masar.vydo.tech',
+        'https://api-masar.vydo.tech',
+        'http://api-masar.vydo.tech',
+        'http://localhost:5173',
+        'http://localhost:4173',
+        'http://localhost:3000',
+        'http://127.0.0.1:5173',
+      ],
   driverVisibilityWindowHours: parseInt(process.env.DRIVER_VISIBILITY_WINDOW_HOURS || '48', 10),
   onTimeToleranceMin: parseInt(process.env.ON_TIME_TOLERANCE_MIN || '15', 10),
 

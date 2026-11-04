@@ -91,5 +91,15 @@ This file tracks architectural and implementation decisions where specifications
   - Complete backend test suite: 59 out of 59 tests passing across all operational and architectural phases.
   - Production frontend build (`vite build`): compiled 1,768 modules in 2.58s with 0 errors.
 
+## 2026-11-04: Production Domains & CORS Configuration
+- **Domain Structure**:
+  - Frontend: `https://masar.vydo.tech`
+  - Backend API: `https://api-masar.vydo.tech`
+- **Dynamic CORS Policy (`server/src/index.js`)**:
+  - Configured CORS middleware with an allowed origin validator matching exact domains (`https://masar.vydo.tech`, `https://api-masar.vydo.tech`), all `*.vydo.tech` subdomains, environment overrides via `CORS_ORIGIN`, and local development ports (`localhost:5173`, `localhost:4173`, `localhost:3000`).
+  - Enabled `credentials: true`, standard HTTP methods (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`), and exposed `Content-Disposition` for PDF/CSV downloads.
+  - Added dedicated unit test suite ([cors.test.js](file:///c:/Users/USER/Desktop/vydo/VYDO-SOFTWARES/Projects/Masar/server/src/routes/cors.test.js)) testing CORS origins, preflight `OPTIONS` requests, and credentials.
+
+
 
 
