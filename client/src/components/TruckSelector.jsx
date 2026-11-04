@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   categoryNames,
@@ -6,7 +6,7 @@ import {
   bodyNames,
   gross,
   truckRows,
-} from '../../../server/db/seed/truckTypes.js';
+} from '../constants/truckTypes.js';
 
 /**
  * Sequential Truck Cascade Selector:
@@ -83,184 +83,201 @@ export default function TruckSelector({
     return gross.by_vehicle;
   }, [value.category, value.type_code]);
 
+  // Use ref to keep latest onChange without triggering re-effects
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Reset category if not in availableCategories
+  useEffect(() => {
+    if (value?.category && !availableCategories.includes(value.category)) {
+      onChangeRef.current?.({
+        ...value,
+        category: '',
+        type_code: '',
+        body_code: '',
+        cooling: '',
+        gross_weight_code: '',
+      });
+    }
+  }, [availableCategories, value?.category]);
+
   // Handle auto-body selection if only 1 body exists
   useEffect(() => {
-    if (availableBodies.length === 1 && value.body_code !== availableBodies[0]) {
-      onChange({ ...value, body_code: availableBodies[0] });
-    }
-  }, [availableBodies, value, onChange]);
+      if (availableBodies.length === 1 && value?.body_code !== availableBodies[0]) {
+        onChangeRef.current?.({ ...value, body_code: availableBodies[0] });
+      }
+}, [availableBodies, value?.body_code]);
 
-  // Handle auto gross selection if mode is 'fixed'
-  useEffect(() => {
-    if (!isShipmentForm && grossConfig && grossConfig.mode === 'fixed') {
-      const code = grossConfig.options[0]?.code;
-      if (value.gross_weight_code !== code) {
-        onChange({ ...value, gross_weight_code: code });
+// Handle auto gross selection if mode is 'fixed'
+useEffect(() => {
+  if (!isShipmentForm && grossConfig && grossConfig.mode === 'fixed') {
+      const code = grossConfig.options?.[0]?.code;
+      if (code && value?.gross_weight_code !== code) {
+        onChangeRef.current?.({ ...value, gross_weight_code: code });
       }
     }
-  }, [grossConfig, isShipmentForm, value, onChange]);
+  }, [grossConfig, isShipmentForm, value?.gross_weight_code]);
 
-  return (
-    <div className="space-y-4">
-      {/* 1. Category */}
+return (
+  <div className="space-y-4">
+    {/* 1. Category */}
+    <div>
+      <label className="block text-sm font-semibold text-navy-900 mb-1.5">
+        {isAr ? 'فئة النقل' : 'Transport Category'}
+      </label>
+      <select
+        value={value.category || ''}
+        onChange={(e) => {
+          const cat = e.target.value;
+          onChange({
+            category: cat,
+            type_code: '',
+            body_code: '',
+            cooling: '',
+            gross_weight_code: '',
+          });
+        }}
+        className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-white text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+      >
+        <option value="">{isAr ? 'اختر فئة...' : 'Select category...'}</option>
+        {availableCategories.map((cat) => (
+          <option key={cat} value={cat}>
+            {isAr ? categoryNames[cat]?.ar : categoryNames[cat]?.en}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    {/* 2. Type */}
+    {value.category && availableTypes.length > 0 && (
       <div>
         <label className="block text-sm font-semibold text-navy-900 mb-1.5">
-          {isAr ? 'فئة النقل' : 'Transport Category'}
+          {isAr ? 'نوع المركبة' : 'Vehicle Type'}
         </label>
         <select
-          value={value.category || ''}
+          value={value.type_code || ''}
           onChange={(e) => {
-            const cat = e.target.value;
+            const typeCode = e.target.value;
             onChange({
-              category: cat,
-              type_code: '',
+              ...value,
+              type_code: typeCode,
               body_code: '',
               cooling: '',
-              gross_weight_code: '',
             });
           }}
           className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-white text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
         >
-          <option value="">{isAr ? 'اختر فئة...' : 'Select category...'}</option>
-          {availableCategories.map((cat) => (
-            <option key={cat} value={cat}>
-              {isAr ? categoryNames[cat]?.ar : categoryNames[cat]?.en}
+          <option value="">{isAr ? 'اختر النوع...' : 'Select vehicle type...'}</option>
+          {availableTypes.map((type) => (
+            <option key={type} value={type}>
+              {isAr ? typeNames[type]?.ar : typeNames[type]?.en}
             </option>
           ))}
         </select>
       </div>
+    )}
 
-      {/* 2. Type */}
-      {value.category && availableTypes.length > 0 && (
-        <div>
-          <label className="block text-sm font-semibold text-navy-900 mb-1.5">
-            {isAr ? 'نوع المركبة' : 'Vehicle Type'}
-          </label>
+    {/* 3. Body (only shown if type has more than 1 body row) */}
+    {value.type_code && availableBodies.length > 1 && (
+      <div>
+        <label className="block text-sm font-semibold text-navy-900 mb-1.5">
+          {isAr ? 'جسم المركبة / الهيكل' : 'Body Style'}
+        </label>
+        <select
+          value={value.body_code || ''}
+          onChange={(e) => {
+            const bodyCode = e.target.value;
+            onChange({ ...value, body_code: bodyCode, cooling: '' });
+          }}
+          className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-white text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+        >
+          <option value="">{isAr ? 'اختر الجسم...' : 'Select body style...'}</option>
+          {availableBodies.map((body) => (
+            <option key={body} value={body}>
+              {isAr ? bodyNames[body]?.ar : bodyNames[body]?.en}
+            </option>
+          ))}
+        </select>
+      </div>
+    )}
+
+    {/* Payload Guidance */}
+    {selectedRow && (
+      <div className="p-3 bg-navy-100/60 rounded-xl text-xs text-navy-800 flex justify-between items-center">
+        <span className="font-medium">
+          {isAr ? 'الحمولة المسموحة للمركبة:' : 'Payload Capacity:'}
+        </span>
+        <span className="font-bold">
+          {selectedRow[3]} – {selectedRow[4]} {selectedRow[5]}
+        </span>
+      </div>
+    )}
+
+    {/* 4. Gross Weight (Only on truck setup, not shipment form) */}
+    {!isShipmentForm && grossConfig && value.body_code && (
+      <div>
+        <label className="block text-sm font-semibold text-navy-900 mb-1.5">
+          {isAr ? 'الوزن الإجمالي' : 'Gross Weight'}
+        </label>
+        {grossConfig.mode === 'fixed' ? (
+          <input
+            type="text"
+            readOnly
+            value={
+              isAr
+                ? grossConfig.options[0]?.label_ar
+                : grossConfig.options[0]?.label_en
+            }
+            className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-slate-100 text-ink-muted text-sm cursor-not-allowed"
+          />
+        ) : (
           <select
-            value={value.type_code || ''}
-            onChange={(e) => {
-              const typeCode = e.target.value;
-              onChange({
-                ...value,
-                type_code: typeCode,
-                body_code: '',
-                cooling: '',
-              });
-            }}
+            value={value.gross_weight_code || ''}
+            onChange={(e) =>
+              onChange({ ...value, gross_weight_code: e.target.value })
+            }
             className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-white text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
-            <option value="">{isAr ? 'اختر النوع...' : 'Select vehicle type...'}</option>
-            {availableTypes.map((type) => (
-              <option key={type} value={type}>
-                {isAr ? typeNames[type]?.ar : typeNames[type]?.en}
+            <option value="">
+              {isAr ? 'اختر الوزن الإجمالي...' : 'Select gross weight...'}
+            </option>
+            {grossConfig.options.map((opt) => (
+              <option key={opt.code} value={opt.code}>
+                {isAr ? opt.label_ar : opt.label_en}
               </option>
             ))}
           </select>
-        </div>
-      )}
+        )}
+      </div>
+    )}
 
-      {/* 3. Body (only shown if type has more than 1 body row) */}
-      {value.type_code && availableBodies.length > 1 && (
-        <div>
-          <label className="block text-sm font-semibold text-navy-900 mb-1.5">
-            {isAr ? 'جسم المركبة / الهيكل' : 'Body Style'}
-          </label>
-          <select
-            value={value.body_code || ''}
-            onChange={(e) => {
-              const bodyCode = e.target.value;
-              onChange({ ...value, body_code: bodyCode, cooling: '' });
-            }}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-white text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-          >
-            <option value="">{isAr ? 'اختر الجسم...' : 'Select body style...'}</option>
-            {availableBodies.map((body) => (
-              <option key={body} value={body}>
-                {isAr ? bodyNames[body]?.ar : bodyNames[body]?.en}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Payload Guidance */}
-      {selectedRow && (
-        <div className="p-3 bg-navy-100/60 rounded-xl text-xs text-navy-800 flex justify-between items-center">
-          <span className="font-medium">
-            {isAr ? 'الحمولة المسموحة للمركبة:' : 'Payload Capacity:'}
-          </span>
-          <span className="font-bold">
-            {selectedRow[3]} – {selectedRow[4]} {selectedRow[5]}
-          </span>
-        </div>
-      )}
-
-      {/* 4. Gross Weight (Only on truck setup, not shipment form) */}
-      {!isShipmentForm && grossConfig && value.body_code && (
-        <div>
-          <label className="block text-sm font-semibold text-navy-900 mb-1.5">
-            {isAr ? 'الوزن الإجمالي' : 'Gross Weight'}
-          </label>
-          {grossConfig.mode === 'fixed' ? (
-            <input
-              type="text"
-              readOnly
-              value={
-                isAr
-                  ? grossConfig.options[0]?.label_ar
-                  : grossConfig.options[0]?.label_en
-              }
-              className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-slate-100 text-ink-muted text-sm cursor-not-allowed"
-            />
-          ) : (
-            <select
-              value={value.gross_weight_code || ''}
-              onChange={(e) =>
-                onChange({ ...value, gross_weight_code: e.target.value })
-              }
-              className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-white text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-            >
-              <option value="">
-                {isAr ? 'اختر الوزن الإجمالي...' : 'Select gross weight...'}
-              </option>
-              {grossConfig.options.map((opt) => (
-                <option key={opt.code} value={opt.code}>
-                  {isAr ? opt.label_ar : opt.label_en}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
-
-      {/* 5. Cooling (Only for refrigerated bodies) */}
-      {value.body_code === 'refrigerated' && (
-        <div>
-          <label className="block text-sm font-semibold text-navy-900 mb-1.5">
-            {isAr ? 'نظام التبريد' : 'Cooling Mode'}
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { code: 'chilled', labelEn: 'Chilled (مبرّد)', labelAr: 'مبرّد' },
-              { code: 'frozen', labelEn: 'Frozen (مجمّد)', labelAr: 'مجمّد' },
-            ].map((c) => (
-              <button
-                key={c.code}
-                type="button"
-                onClick={() => onChange({ ...value, cooling: c.code })}
-                className={`py-2.5 px-4 text-sm font-semibold rounded-xl border transition ${
-                  value.cooling === c.code
-                    ? 'border-amber-500 bg-amber-50 text-navy-900 ring-2 ring-amber-200'
-                    : 'border-line bg-white text-ink hover:bg-slate-50'
+    {/* 5. Cooling (Only for refrigerated bodies) */}
+    {value.body_code === 'refrigerated' && (
+      <div>
+        <label className="block text-sm font-semibold text-navy-900 mb-1.5">
+          {isAr ? 'نظام التبريد' : 'Cooling Mode'}
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { code: 'chilled', labelEn: 'Chilled (مبرّد)', labelAr: 'مبرّد' },
+            { code: 'frozen', labelEn: 'Frozen (مجمّد)', labelAr: 'مجمّد' },
+          ].map((c) => (
+            <button
+              key={c.code}
+              type="button"
+              onClick={() => onChange({ ...value, cooling: c.code })}
+              className={`py-2.5 px-4 text-sm font-semibold rounded-xl border transition ${value.cooling === c.code
+                  ? 'border-amber-500 bg-amber-50 text-navy-900 ring-2 ring-amber-200'
+                  : 'border-line bg-white text-ink hover:bg-slate-50'
                 }`}
-              >
-                {isAr ? c.labelAr : c.labelEn}
-              </button>
-            ))}
-          </div>
+            >
+              {isAr ? c.labelAr : c.labelEn}
+            </button>
+          ))}
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
 }
 

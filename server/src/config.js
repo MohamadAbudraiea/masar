@@ -9,7 +9,14 @@ export const config = {
   driverVisibilityWindowHours: parseInt(process.env.DRIVER_VISIBILITY_WINDOW_HOURS || '48', 10),
   onTimeToleranceMin: parseInt(process.env.ON_TIME_TOLERANCE_MIN || '15', 10),
 
-  // R2 Storage
+  // Supabase Storage
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '',
+    bucket: process.env.SUPABASE_STORAGE_BUCKET || 'masar-documents',
+  },
+
+  // R2 Storage (Optional legacy / alternative)
   r2: {
     accountId: process.env.R2_ACCOUNT_ID || '',
     accessKeyId: process.env.R2_ACCESS_KEY_ID || '',

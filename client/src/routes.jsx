@@ -5,14 +5,23 @@ import { useAuth } from './state/auth.jsx';
 // Pages & Layouts
 import Login from './pages/public/Login.jsx';
 import PendingApproval from './pages/public/PendingApproval.jsx';
+import SignupChoice from './pages/public/SignupChoice.jsx';
+import ManufacturerSignup from './pages/public/ManufacturerSignup.jsx';
+import DriverSignup from './pages/public/DriverSignup.jsx';
 import ManufacturerLayout from './layouts/ManufacturerLayout.jsx';
 import ManufacturerOverview from './pages/manufacturer/Overview.jsx';
+import NewShipment from './pages/manufacturer/NewShipment.jsx';
+import ShipmentDetail from './pages/manufacturer/ShipmentDetail.jsx';
 import EscrowLayout from './layouts/EscrowLayout.jsx';
 import EscrowOverview from './pages/escrow/Overview.jsx';
 import AdminLayout from './layouts/AdminLayout.jsx';
 import AdminOverview from './pages/admin/Overview.jsx';
+import AdminApprovals from './pages/admin/Approvals.jsx';
 import DriverLayout from './layouts/DriverLayout.jsx';
 import DriverShipments from './pages/driver/Shipments.jsx';
+import ActiveShipment from './pages/driver/ActiveShipment.jsx';
+import DriverEarnings from './pages/driver/Earnings.jsx';
+import DriverProfile from './pages/driver/Profile.jsx';
 
 function ProtectedRoute({ allowedRoles, children }) {
   const { user, token, loading } = useAuth();
@@ -64,6 +73,9 @@ export default function AppRoutes() {
       {/* Public Pages */}
       <Route path="/login" element={<Login />} />
       <Route path="/pending-approval" element={<PendingApproval />} />
+      <Route path="/signup" element={<SignupChoice />} />
+      <Route path="/signup/manufacturer" element={<ManufacturerSignup />} />
+      <Route path="/signup/driver" element={<DriverSignup />} />
 
       {/* 1. Manufacturer Portal */}
       <Route
@@ -75,7 +87,8 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<ManufacturerOverview />} />
-        {/* Subroutes to be added in Phase 2 & 3 */}
+        <Route path="shipments/new" element={<NewShipment />} />
+        <Route path="shipments/:id" element={<ShipmentDetail />} />
       </Route>
 
       {/* 2. Escrow Portal */}
@@ -100,6 +113,7 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<AdminOverview />} />
+        <Route path="approvals" element={<AdminApprovals />} />
       </Route>
 
       {/* 4. Driver App (Phone Frame) */}
@@ -112,6 +126,10 @@ export default function AppRoutes() {
         }
       >
         <Route index element={<DriverShipments />} />
+        <Route path="active" element={<ActiveShipment />} />
+        <Route path="earnings" element={<DriverEarnings />} />
+        <Route path="me" element={<DriverProfile />} />
+        <Route path="shipments/:id" element={<ActiveShipment />} />
       </Route>
 
       {/* Fallback */}

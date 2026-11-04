@@ -1,10 +1,18 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import { fileURLToPath } from 'url';
 import { config } from './config.js';
 import { errorHandler } from './middleware/error.js';
 import authRouter from './routes/auth.js';
 import meRouter from './routes/me.js';
+import uploadsRouter from './routes/uploads.js';
+import referenceRouter from './routes/reference.js';
+import geoRouter from './routes/geo.js';
+import adminRouter from './routes/admin.js';
+import locationsRouter from './routes/locations.js';
+import ticketsRouter from './routes/tickets.js';
+import driverRouter from './routes/driver.js';
 
 const app = express();
 
@@ -26,8 +34,14 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRouter);
 app.use('/api/me', meRouter);
-
-import { fileURLToPath } from 'url';
+app.use('/api/uploads', uploadsRouter);
+app.use('/api/files', uploadsRouter);
+app.use('/api/reference', referenceRouter);
+app.use('/api/geo', geoRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/locations', locationsRouter);
+app.use('/api/tickets', ticketsRouter);
+app.use('/api/driver', driverRouter);
 
 // Central error handler
 app.use(errorHandler);
