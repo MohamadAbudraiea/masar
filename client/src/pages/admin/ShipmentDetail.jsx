@@ -14,7 +14,7 @@ import {
   MapPin,
   Calendar,
 } from 'lucide-react';
-import { apiClient } from '../../api/client.js';
+import { apiClient, getApiUrl } from '../../api/client.js';
 import StatusChip from '../../components/StatusChip.jsx';
 import Timeline from '../../components/Timeline.jsx';
 import PdfViewer from '../../components/PdfViewer.jsx';
@@ -58,7 +58,7 @@ export default function AdminShipmentDetail() {
   }
 
   const handleDownloadPdf = () => {
-    window.open(`/api/tickets/${id}/pdf`, '_blank');
+    window.open(getApiUrl(`/tickets/${id}/pdf`), '_blank');
   };
 
   const ledgerEntries = ticket.ledger_entries || [];

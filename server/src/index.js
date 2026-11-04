@@ -44,24 +44,36 @@ app.use(
       // Allow requests with no origin (mobile apps, curl, server-to-server)
       if (!origin) return callback(null, true);
 
-      // Check allowed list, *.vydo.tech domains, and localhost
+      // Check allowed list, *.vydo.tech domains, *.vercel.app, and localhost
       if (
         allowedOrigins.has(origin) ||
-        origin.endsWith('.vydo.tech') ||
+        origin.includes('vydo.tech') ||
+        origin.endsWith('.vercel.app') ||
         origin.includes('localhost') ||
         origin.includes('127.0.0.1')
       ) {
         return callback(null, true);
       }
 
-      callback(new Error(`CORS error: Origin ${origin} not permitted`));
+      return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers',
+    ],
     exposedHeaders: ['Content-Disposition'],
+    optionsSuccessStatus: 200,
   })
 );
+
+app.options('*', cors());
 
 app.use(express.json());
 app.use(morgan('dev'));

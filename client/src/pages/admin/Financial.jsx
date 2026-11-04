@@ -11,7 +11,7 @@ import {
   Truck,
   RotateCcw,
 } from 'lucide-react';
-import { apiClient } from '../../api/client.js';
+import { apiClient, getApiUrl } from '../../api/client.js';
 import StatCard from '../../components/StatCard.jsx';
 import DataTable from '../../components/DataTable.jsx';
 import TruckLoader from '../../components/TruckLoader.jsx';
@@ -54,7 +54,7 @@ export default function AdminFinancial() {
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     params.set('format', 'csv');
-    window.open(`/api/reports/admin/financial?${params.toString()}`, '_blank');
+    window.open(getApiUrl(`/reports/admin/financial?${params.toString()}`), '_blank');
   };
 
   const kpis = data?.kpis || {

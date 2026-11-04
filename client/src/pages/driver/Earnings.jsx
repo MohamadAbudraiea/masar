@@ -12,7 +12,7 @@ import {
   Clock,
   Download,
 } from 'lucide-react';
-import { apiClient } from '../../api/client.js';
+import { apiClient, getApiUrl } from '../../api/client.js';
 import { useAuth } from '../../state/auth.jsx';
 import TruckLoader from '../../components/TruckLoader.jsx';
 import { formatDateTime } from '../../lib/time.js';
@@ -151,7 +151,7 @@ export default function DriverEarnings() {
             if (from) qs.set('from', from);
             if (to) qs.set('to', to);
             qs.set('format', 'csv');
-            window.open(`/api/reports/driver/earnings?${qs.toString()}`, '_blank');
+            window.open(getApiUrl(`/reports/driver/earnings?${qs.toString()}`), '_blank');
           }}
           className="p-1.5 rounded-lg border border-line bg-surface hover:bg-slate-200 text-ink-muted"
           title={isAr ? 'تصدير CSV' : 'Export CSV'}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Package, ArrowUpRight, Building2, Truck } from 'lucide-react';
-import { apiClient } from '../../api/client.js';
+import { apiClient, getApiUrl } from '../../api/client.js';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import FilterBar from '../../components/FilterBar.jsx';
 import DataTable from '../../components/DataTable.jsx';
@@ -59,7 +59,7 @@ export default function EscrowShipments() {
     if (filters.from) queryParams.set('from', filters.from);
     if (filters.to) queryParams.set('to', filters.to);
     queryParams.set('format', 'csv');
-    window.open(`/api/tickets?${queryParams.toString()}`, '_blank');
+    window.open(getApiUrl(`/tickets?${queryParams.toString()}`), '_blank');
   };
 
   const columns = [

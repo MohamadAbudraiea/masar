@@ -76,7 +76,7 @@ test('CORS - handles preflight OPTIONS request for masar.vydo.tech', async () =>
       },
     });
 
-    assert.equal(res.status, 204);
+    assert.ok([200, 204].includes(res.status));
     assert.equal(res.headers.get('access-control-allow-origin'), 'https://masar.vydo.tech');
     assert.ok(res.headers.get('access-control-allow-methods').includes('POST'));
   } finally {

@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, Package, Building2, Truck, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../state/auth.jsx';
+import { apiClient } from '../api/client.js';
 import { linkTo } from '../lib/links.js';
 
 export default function GlobalSearch() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
   const navigate = useNavigate();
@@ -27,14 +28,9 @@ export default function GlobalSearch() {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setResults(data);
-          setIsOpen(true);
-        }
+        const data = await apiClient(`/search?q=${encodeURIComponent(query.trim())}`);
+        setResults(data || { tickets: [], manufacturers: [], drivers: [] });
+        setIsOpen(true);
       } catch (err) {
         console.error('Search error', err);
       } finally {

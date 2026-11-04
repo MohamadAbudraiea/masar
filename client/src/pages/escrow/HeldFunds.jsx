@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Lock, ArrowUpRight, Building2, Package } from 'lucide-react';
-import { apiClient } from '../../api/client.js';
+import { apiClient, getApiUrl } from '../../api/client.js';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import FilterBar from '../../components/FilterBar.jsx';
 import DataTable from '../../components/DataTable.jsx';
@@ -49,7 +49,7 @@ export default function EscrowHeldFunds() {
     if (filters.from) params.set('from', filters.from);
     if (filters.to) params.set('to', filters.to);
     params.set('format', 'csv');
-    window.open(`/api/reports/escrow/held?${params.toString()}`, '_blank');
+    window.open(getApiUrl(`/reports/escrow/held?${params.toString()}`), '_blank');
   };
 
   const totalHeldAmount = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
