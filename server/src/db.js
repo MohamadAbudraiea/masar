@@ -7,7 +7,7 @@ export const pool = new Pool({
   connectionString: config.databaseUrl,
 });
 
-// Enforce Asia/Amman time zone on every connection
+// Enforce Asia/Amman time zone on every connection (02 §6)
 pool.on('connect', (client) => {
   client.query("SET TIME ZONE 'Asia/Amman'").catch((err) => {
     console.error("Error setting time zone on connection:", err.message);
