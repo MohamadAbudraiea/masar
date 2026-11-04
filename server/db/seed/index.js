@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { pool } from '../../src/db.js';
 import { goodsCategories } from './goodsCategories.js';
 import { categoryNames, typeNames, bodyNames, gross, truckRows } from './truckTypes.js';
+import { seedDemoAccounts } from './demoAccounts.js';
 
 export async function seedReferenceData() {
   console.log('Seeding reference data...');
@@ -89,6 +90,8 @@ export async function seedReferenceData() {
     );
   }
   console.log(`✓ Seeded ${truckRows.length} truck catalog configurations.`);
+  // 3. Demo Accounts
+  await seedDemoAccounts();
 }
 
 // Auto-run if executed directly
