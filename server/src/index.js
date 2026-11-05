@@ -1,3 +1,13 @@
+// Polyfill native WebSocket for Node.js < 22 runtimes (e.g. Node 18/20 in Docker/Easypanel)
+// Required by @supabase/supabase-js realtime dependency even when only using Storage.
+if (typeof globalThis.WebSocket === 'undefined') {
+  globalThis.WebSocket = class WebSocket {
+    constructor() {}
+    close() {}
+    send() {}
+  };
+}
+
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';

@@ -1,3 +1,12 @@
+// Polyfill global WebSocket for Node.js < 22 runtimes (e.g. Node 18/20 in Docker/Easypanel)
+if (typeof globalThis.WebSocket === 'undefined') {
+  globalThis.WebSocket = class WebSocket {
+    constructor() {}
+    close() {}
+    send() {}
+  };
+}
+
 import { createClient } from '@supabase/supabase-js';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -11,12 +20,20 @@ let bucketEnsured = false;
 
 function getSupabaseClient() {
   if (!supabaseClient && config.supabase.url && config.supabase.serviceKey) {
-    supabaseClient = createClient(config.supabase.url, config.supabase.serviceKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
+    try {
+      supabaseClient = createClient(config.supabase.url, config.supabase.serviceKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+        realtime: {
+          transport: globalThis.WebSocket,
+        },
+      });
+    } catch (err) {
+      console.warn('Failed to initialize Supabase client:', err.message);
+      return null;
+    }
   }
   return supabaseClient;
 }
@@ -124,6 +141,14 @@ export async function uploadFile({ buffer, originalName, mimeType, kind = 'misc'
   };
 }
 
+function getMockFallbackUrl(key) {
+  if (process.env.API_URL) return `${process.env.API_URL}/files/mock/${key}`;
+  if (config.frontendUrl?.includes('vydo.tech') || process.env.NODE_ENV === 'production') {
+    return `https://api-masar.vydo.tech/api/files/mock/${key}`;
+  }
+  return `http://localhost:4000/api/files/mock/${key}`;
+}
+
 /**
  * Generates a presigned read URL valid for the specified duration (default 1 hour / 3600 seconds).
  */
@@ -140,7 +165,7 @@ export async function getPresignedDownloadUrl(key, expiresIn = 3600) {
 
     if (error || !data?.signedUrl) {
       // Key may not exist in live bucket during testing/mocking; gracefully fallback to mock URL
-      return `http://localhost:4000/api/files/mock/${key}`;
+      return getMockFallbackUrl(key);
     }
 
     return data.signedUrl;
@@ -157,5 +182,5 @@ export async function getPresignedDownloadUrl(key, expiresIn = 3600) {
   }
 
   // 3. Development fallback URL
-  return `http://localhost:4000/api/files/mock/${key}`;
+  return getMockFallbackUrl(key);
 }
