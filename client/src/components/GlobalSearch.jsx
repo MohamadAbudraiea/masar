@@ -39,7 +39,7 @@ export default function GlobalSearch() {
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [query, token]);
+  }, [query]);
 
   // Click outside to close
   useEffect(() => {
