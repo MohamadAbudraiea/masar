@@ -36,7 +36,7 @@ export default function DriverLayout() {
       {/* 1. Driver App Header (Large, High Contrast) */}
       <header className="px-5 py-4 bg-navy-900 text-white shrink-0 shadow-sm flex items-center justify-between">
         <div>
-          <span className="text-xs text-amber-500 font-bold block uppercase tracking-wider">
+          <span className="text-[15px] text-amber-500 font-bold block uppercase tracking-wider">
             {isAr ? 'تطبيق السائق' : 'Driver App'}
           </span>
           <h2 className="text-xl font-black text-white truncate max-w-[200px]">
@@ -49,7 +49,7 @@ export default function DriverLayout() {
           <button
             type="button"
             onClick={toggleLanguage}
-            className="p-2 rounded-xl bg-navy-800 text-slate-300 hover:text-white font-bold text-xs flex items-center gap-1"
+            className="p-2 rounded-xl bg-navy-800 text-slate-300 hover:text-white font-bold text-[15px] flex items-center gap-1"
           >
             <Globe className="w-4 h-4" />
             <span>{isAr ? 'EN' : 'عربي'}</span>

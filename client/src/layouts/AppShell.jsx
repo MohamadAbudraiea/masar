@@ -16,6 +16,7 @@ import { useAuth } from '../state/auth.jsx';
 import { setLanguage } from '../i18n/index.js';
 import NotificationBell from '../components/NotificationBell.jsx';
 import GlobalSearch from '../components/GlobalSearch.jsx';
+import Logo from '../components/Logo.jsx';
 
 /**
  * Standard Desktop AppShell Layout (264px navy sidebar + 64px topbar).
@@ -53,20 +54,11 @@ export default function AppShell({ roleTitle, navItems = [], children }) {
         }`}
       >
         {/* Brand Header */}
-        <div className="h-16 px-6 flex items-center justify-between border-b border-navy-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500 text-navy-900 flex items-center justify-center font-black shadow-xs">
-              <Truck className="w-4 h-4 stroke-[2.5]" />
-            </div>
-            <div>
-              <span className="text-lg font-black tracking-tight text-white block leading-none">
-                {isAr ? 'مَسَار' : 'masar'}
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium leading-none">
-                {roleTitle}
-              </span>
-            </div>
-          </div>
+        <div className="h-20 px-6 flex items-center justify-between border-b border-navy-800">
+          <NavLink to={navItems[0]?.to || '/'} className="flex flex-col gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded-lg">
+            <Logo tone="light" size={22} lang={isAr ? 'ar' : 'en'} />
+            <span className="text-[11px] text-slate-300 font-semibold leading-none ps-0.5">{roleTitle}</span>
+          </NavLink>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(false)}
@@ -87,24 +79,32 @@ export default function AppShell({ roleTitle, navItems = [], children }) {
                 end={item.end}
                 onClick={() => setMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  `relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold transition-all ${
                     isActive
-                      ? 'bg-navy-800 text-amber-500 border-s-4 border-amber-500 ps-2.5 shadow-xs'
-                      : 'text-slate-300 hover:bg-navy-800/60 hover:text-white'
+                      ? 'bg-navy-700 text-white before:absolute before:inset-y-2 before:start-0 before:w-1 before:rounded-full before:bg-amber-500 [&_svg]:text-amber-500'
+                      : 'text-slate-300 hover:bg-navy-800 hover:text-white'
                   }`
                 }
               >
                 {Icon && <Icon className="w-4 h-4 shrink-0" />}
-                <span className="truncate">{item.label}</span>
+                <span className="truncate flex-1">{item.label}</span>
+                {item.badge > 0 && (
+                  <span className="min-w-5 h-5 px-1.5 rounded-full bg-amber-500 text-navy-900 text-[11px] font-extrabold flex items-center justify-center tabular-nums">
+                    {item.badge}
+                  </span>
+                )}
               </NavLink>
             );
           })}
         </nav>
 
         {/* User Card in Sidebar Footer */}
-        <div className="p-3 border-t border-navy-800 bg-navy-950/40">
-          <div className="flex items-center justify-between p-2 rounded-xl bg-navy-900">
-            <div className="truncate min-w-0 me-2">
+        <div className="p-3 border-t border-navy-800 ">
+          <div className="flex items-center p-2 rounded-xl bg-navy-800/60">
+            <div className="h-9 w-9 shrink-0 rounded-full bg-navy-700 text-amber-500 flex items-center justify-center text-xs font-extrabold me-2.5">
+              {(user?.name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+            </div>
+            <div className="truncate min-w-0 me-2 flex-1">
               <div className="text-xs font-bold text-white truncate">{user?.name}</div>
               <div className="text-[10px] text-slate-400 capitalize">{user?.role}</div>
             </div>
@@ -123,7 +123,7 @@ export default function AppShell({ roleTitle, navItems = [], children }) {
       {/* 2. Main Shell Content Container */}
       <div className="flex-1 flex flex-col md:ps-64 min-w-0">
         {/* Topbar (64px) */}
-        <header className="h-16 bg-card border-b border-line px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+        <header className="h-16 bg-card border-b border-line px-4 md:px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <button
               type="button"

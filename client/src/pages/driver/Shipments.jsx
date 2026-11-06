@@ -100,10 +100,10 @@ export default function DriverShipments() {
             <Truck className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div>
-            <div className="text-xs font-bold text-navy-900">
+            <div className="text-[15px] font-bold text-navy-900">
               {isAr ? 'شاحنتك المعتمدة:' : 'Registered Truck:'}
             </div>
-            <div className="text-[11px] text-ink-muted">
+            <div className="text-sm text-ink-muted">
               {user?.profile?.truck
                 ? `${user.profile.truck.type_name || user.profile.truck.type || ''} · ${user.profile.truck.body_name || user.profile.truck.body || ''} (${user.profile.truck.plate_number})`
                 : isAr ? 'نقل متوسط (براد)' : 'Medium / Refrigerated'}
@@ -111,7 +111,7 @@ export default function DriverShipments() {
           </div>
         </div>
         <span
-          className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ${
+          className={`px-3 py-1 rounded-full text-[15px] font-bold shrink-0 ${
             isBusy
               ? 'bg-amber-100 text-amber-900 border border-amber-200'
               : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
@@ -130,14 +130,14 @@ export default function DriverShipments() {
           className="p-4 rounded-2xl bg-blue-50 border border-blue-200 cursor-pointer flex items-center justify-between transition-transform active:scale-98"
         >
           <div className="space-y-0.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
+            <span className="text-sm font-bold uppercase tracking-wider text-blue-700">
               {isAr ? 'لديك شحنة قيد التنفيذ حالياً' : 'Active Trip in Progress'}
             </span>
-            <div className="text-xs font-black text-navy-900">
+            <div className="text-[15px] font-black text-navy-900">
               {activeTicket.ticket_number} · {activeTicket.pickup?.city} → {activeTicket.dest?.city}
             </div>
           </div>
-          <div className="flex items-center gap-1 text-xs font-bold text-blue-700">
+          <div className="flex items-center gap-1 text-[15px] font-bold text-blue-700">
             <span>{isAr ? 'عرض' : 'View'}</span>
             <ChevronRight className="w-4 h-4 rtl:rotate-180" />
           </div>
@@ -150,7 +150,7 @@ export default function DriverShipments() {
           <Package className="w-4 h-4 text-emerald-600" />
           <span>{isAr ? 'الشحنات المتاحة المطابقة لشاحنتك' : 'Open Matching Shipments'}</span>
         </h2>
-        <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-slate-100 text-slate-700">
+        <span className="px-2 py-0.5 rounded-full text-sm font-bold bg-slate-100 text-slate-700">
           {availableItems.length}
         </span>
       </div>
@@ -158,15 +158,15 @@ export default function DriverShipments() {
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center gap-3">
           <TruckLoader size="md" />
-          <span className="text-xs text-ink-muted">{isAr ? 'جاري البحث عن شحنات...' : 'Searching shipments...'}</span>
+          <span className="text-[15px] text-ink-muted">{isAr ? 'جاري البحث عن شحنات...' : 'Searching shipments...'}</span>
         </div>
       ) : error ? (
         <div className="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-2">
           <AlertCircle className="w-6 h-6 text-rose-500 mx-auto" />
-          <p className="text-xs text-rose-800 font-semibold">{error}</p>
+          <p className="text-[15px] text-rose-800 font-semibold">{error}</p>
           <button
             onClick={loadData}
-            className="px-4 py-1.5 rounded-xl bg-navy-900 text-white text-xs font-bold"
+            className="px-4 py-1.5 rounded-xl bg-navy-900 text-white text-[15px] font-bold"
           >
             {isAr ? 'إعادة المحاولة' : 'Retry'}
           </button>
@@ -177,7 +177,7 @@ export default function DriverShipments() {
           <h3 className="text-sm font-bold text-navy-900">
             {isAr ? 'لا توجد شحنات مفتوحة حالياً' : 'No open shipments match your truck'}
           </h3>
-          <p className="text-xs text-ink-muted leading-relaxed max-w-xs mx-auto">
+          <p className="text-[15px] text-ink-muted leading-relaxed max-w-xs mx-auto">
             {isAr
               ? 'فور أن ينشر أحد المصانع شحنة تطابق مواصفات وحمولة شاحنتك، ستظهر لك هنا مباشرة مع إشعار فوري.'
               : 'New freight requests matching your truck type and payload capacity will automatically appear here.'}
@@ -193,7 +193,7 @@ export default function DriverShipments() {
               {/* Route Banner (High Contrast) */}
               <div className="flex items-start justify-between gap-2 border-b border-line pb-3">
                 <div>
-                  <span className="text-[10px] font-mono font-bold text-slate-400 block mb-0.5">
+                  <span className="text-sm font-bold text-slate-400 block mb-0.5">
                     {ticket.ticket_number}
                   </span>
                   <div className="text-base font-black text-navy-900 flex items-center gap-2">
@@ -201,7 +201,7 @@ export default function DriverShipments() {
                     <ArrowRight className="w-4 h-4 text-slate-400 rtl:rotate-180 shrink-0" />
                     <span>{ticket.dest?.city || 'Zarqa'}</span>
                   </div>
-                  <div className="text-xs text-ink-muted mt-0.5">
+                  <div className="text-[15px] text-ink-muted mt-0.5">
                     {ticket.pickup?.area ? `${ticket.pickup.area} → ` : ''}
                     {ticket.dest?.area || ''}
                     {ticket.distance_km ? ` (${ticket.distance_km} km)` : ''}
@@ -210,28 +210,28 @@ export default function DriverShipments() {
 
                 {/* Big Bold Earnings Box (Driver sees earnings ONLY) */}
                 <div className="text-end bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl shrink-0">
-                  <span className="text-[10px] font-bold text-emerald-800 block uppercase tracking-wider">
+                  <span className="text-sm font-bold text-emerald-800 block uppercase tracking-wider">
                     {isAr ? 'صافي أرباحك' : 'Your Earnings'}
                   </span>
-                  <div className="text-lg font-black font-mono text-emerald-700 leading-tight">
+                  <div className="text-lg font-black text-emerald-700 leading-tight">
                     {formatMoney(ticket.earnings)}
                   </div>
                 </div>
               </div>
 
               {/* Cargo & Pickup Time */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="grid grid-cols-2 gap-3 text-[15px]">
                 <div>
-                  <span className="text-[11px] text-ink-muted block">{isAr ? 'البضاعة والحمولة' : 'Cargo'}</span>
+                  <span className="text-sm text-ink-muted block">{isAr ? 'البضاعة والحمولة' : 'Cargo'}</span>
                   <span className="font-bold text-navy-900">{ticket.goods?.category_name}</span>
-                  <span className="text-slate-500 font-mono ms-1">
+                  <span className="text-slate-500 ms-1">
                     ({ticket.goods?.quantity} {ticket.goods?.unit})
                   </span>
                 </div>
 
                 <div>
-                  <span className="text-[11px] text-ink-muted block">{isAr ? 'موعد التحميل' : 'Pickup Time'}</span>
-                  <span className="font-mono font-semibold text-slate-800">
+                  <span className="text-sm text-ink-muted block">{isAr ? 'موعد التحميل' : 'Pickup Time'}</span>
+                  <span className="font-semibold text-slate-800">
                     {formatDateTime(ticket.pickup_at)}
                   </span>
                 </div>
@@ -240,22 +240,22 @@ export default function DriverShipments() {
               {/* Special Badges */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 {ticket.needs_loading && (
-                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium">
+                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-sm font-medium">
                     {isAr ? 'تحميل بالمصنع' : 'Loading at pickup'}
                   </span>
                 )}
                 {ticket.needs_unloading && (
-                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium">
+                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-sm font-medium">
                     {isAr ? 'تفريغ بالموقع' : 'Unloading at dest'}
                   </span>
                 )}
                 {ticket.is_customs && (
-                  <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 text-[10px] font-bold border border-blue-200">
+                  <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 text-sm font-bold border border-blue-200">
                     {isAr ? 'معاملة جمركية' : 'Customs shipment'}
                   </span>
                 )}
                 {ticket.is_hazardous && (
-                  <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200">
+                  <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-sm font-bold border border-amber-200">
                     ⚠️ ADR
                   </span>
                 )}
@@ -307,13 +307,13 @@ export default function DriverShipments() {
         {acceptModalTicket && (
           <div className="space-y-3">
             {/* Route & Cargo Card */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-line space-y-2 text-xs">
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-line space-y-2 text-[15px]">
               <div className="flex items-center justify-between">
-                <span className="font-mono font-bold text-slate-400 text-[11px]">
+                <span className="font-bold text-slate-400 text-sm">
                   {acceptModalTicket.ticket_number}
                 </span>
                 {acceptModalTicket.distance_km && (
-                  <span className="font-mono font-semibold text-slate-600 text-[11px]">
+                  <span className="font-semibold text-slate-600 text-sm">
                     {acceptModalTicket.distance_km} km
                   </span>
                 )}
@@ -325,9 +325,9 @@ export default function DriverShipments() {
                 <span>{acceptModalTicket.dest?.city || 'Zarqa'}</span>
               </div>
 
-              <div className="text-[11px] text-ink-muted flex items-center justify-between pt-1 border-t border-line/60">
+              <div className="text-sm text-ink-muted flex items-center justify-between pt-1 border-t border-line/60">
                 <span>{acceptModalTicket.goods?.category_name}</span>
-                <span className="font-mono font-bold text-navy-900">
+                <span className="font-bold text-navy-900">
                   {acceptModalTicket.goods?.quantity} {acceptModalTicket.goods?.unit}
                 </span>
               </div>
@@ -335,13 +335,13 @@ export default function DriverShipments() {
 
             {/* Guaranteed Earnings Box */}
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 block">
+              <span className="text-sm font-bold uppercase tracking-wider text-emerald-800 block">
                 {isAr ? 'صافي أرباحك المضمونة' : 'Your Guaranteed Net Earnings'}
               </span>
-              <div className="text-2xl font-black font-mono text-emerald-700">
+              <div className="text-2xl font-black text-emerald-700">
                 {formatMoney(acceptModalTicket.earnings)}
               </div>
-              <p className="text-[11px] text-emerald-900 font-medium pt-1">
+              <p className="text-sm text-emerald-900 font-medium pt-1">
                 {isAr
                   ? 'المبلغ مودع مسبقاً في حساب سيف باي وسيتم تحويله لحسابك البنكي فور التسليم.'
                   : 'Funds are secured in SafePay Escrow and automatically released to your bank upon delivery.'}

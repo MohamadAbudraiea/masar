@@ -1,90 +1,204 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  CheckCircle,
+  CheckCircle2,
   XCircle,
-  Clock,
-  Eye,
   FileText,
   Truck,
   Building2,
-  Calendar,
   Phone,
   Mail,
-  MapPin,
-  ShieldAlert,
   X,
-  AlertCircle,
-  ExternalLink,
+  ChevronLeft,
   ChevronRight,
   UserCheck,
+  ClipboardCheck,
+  Image as ImageIcon,
+  Download,
+  ExternalLink,
+  Clock,
+  ShieldCheck,
+  Snowflake,
+  AlertTriangle,
+  Landmark,
+  Globe2,
+  Check,
 } from 'lucide-react';
 import { apiClient } from '../../api/client.js';
 import { formatDateTime } from '../../lib/time.js';
-import PdfViewer from '../../components/PdfViewer.jsx';
 import TruckLoader from '../../components/TruckLoader.jsx';
 import { useToast } from '../../state/toast.jsx';
+
+const LICENSE_HINT = {
+  4: { en: 'Light & medium trucks', ar: 'شاحنات خفيفة ومتوسطة' },
+  5: { en: 'Heavy rigid, service & tankers', ar: 'ثقيلة، خدمات، صهاريج' },
+  6: { en: 'Tractor + trailer', ar: 'رأس قاطرة ومقطورة' },
+};
+const CATEGORY_LABEL = {
+  light: ['Light', 'خفيفة'],
+  medium: ['Medium', 'متوسطة'],
+  heavy: ['Heavy', 'ثقيلة'],
+  heavy_rigid: ['Heavy rigid', 'ثقيلة'],
+  heavy_service: ['Heavy service', 'خدمات ثقيلة'],
+  tractor_trailer: ['Tractor + trailer', 'قاطرة ومقطورة'],
+  tanker: ['Tanker', 'صهريج'],
+};
+
+function waited(iso, isAr) {
+  const h = Math.max(0, (Date.now() - new Date(iso).getTime()) / 36e5);
+  if (h < 1) return { text: isAr ? 'أقل من ساعة' : 'less than 1 h', late: false };
+  if (h < 24) return { text: isAr ? `${Math.round(h)} ساعة` : `${Math.round(h)} h`, late: false };
+  const d = Math.round(h / 24);
+  return { text: isAr ? `${d} يوم` : `${d} day${d > 1 ? 's' : ''}`, late: true };
+}
+
+function initials(name = '') {
+  return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+}
+
+/** Build the list of documents (PDFs + photos) for an applicant from the real payload. */
+function documentsOf(u, isAr) {
+  const p = u.profile || {};
+  if (u.role === 'manufacturer') {
+    return [
+      { id: 'cr', kind: 'pdf', label: isAr ? 'السجل التجاري' : 'Commercial registration', url: p.commercial_registration_url, required: true },
+      { id: 'pl', kind: 'pdf', label: isAr ? 'رخصة المهن' : 'Professions license', url: p.professions_license_url, required: true },
+    ];
+  }
+  const docs = [
+    { id: 'id', kind: 'pdf', label: isAr ? 'الهوية' : 'National ID', url: p.id_doc_url, required: true },
+    { id: 'lic', kind: 'pdf', label: isAr ? 'رخصة القيادة' : 'Driving license', url: p.license_doc_url, required: true },
+    { id: 'tlic', kind: 'pdf', label: isAr ? 'رخصة الشاحنة' : 'Truck license', url: p.truck_license_doc_url, required: true },
+  ];
+  if (p.scope === 'external') docs.push({ id: 'pass', kind: 'pdf', label: isAr ? 'جواز السفر' : 'Passport', url: p.passport_doc_url, required: true });
+  if (p.adr_certified) docs.push({ id: 'adr', kind: 'pdf', label: isAr ? 'شهادة ADR' : 'ADR certificate', url: p.adr_doc_url, required: true });
+  (p.truck_photos || []).forEach((url, i) =>
+    docs.push({ id: `ph${i}`, kind: 'image', label: isAr ? `صورة الشاحنة ${i + 1}` : `Truck photo ${i + 1}`, url, required: false })
+  );
+  return docs;
+}
+
+function Field({ label, children, mono = false }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-ink-muted">{label}</dt>
+      <dd className={`mt-0.5 text-sm font-semibold text-navy-900 break-words ${mono ? 'tabular-nums tracking-wide' : ''}`}>{children || '—'}</dd>
+    </div>
+  );
+}
+
+function Section({ icon: Icon, title, children }) {
+  return (
+    <section className="rounded-2xl border border-line p-4">
+      <h3 className="flex items-center gap-2 text-sm font-bold text-navy-900 mb-3">
+        <Icon className="h-4 w-4 text-navy-700" />
+        {title}
+      </h3>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3">{children}</dl>
+    </section>
+  );
+}
 
 export default function AdminApprovals() {
   const { i18n } = useTranslation();
   const toast = useToast();
   const isAr = i18n.language === 'ar';
 
-  const [activeTab, setActiveTab] = useState('manufacturer'); // 'manufacturer' | 'driver'
+  const [activeTab, setActiveTab] = useState('manufacturer');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Inspection Drawer State
-  const [selectedUser, setSelectedUser] = useState(null);
-
-  // Reject Modal State
-  const [rejectingUser, setRejectingUser] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [activeDoc, setActiveDoc] = useState(null);
+  const [viewed, setViewed] = useState({}); // { [userId]: Set(docId) }
+  const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const [notification, setNotification] = useState(null);
 
-  // Photo preview modal
-  const [previewPhoto, setPreviewPhoto] = useState(null);
-
-  const fetchApprovals = async () => {
+  const fetchApprovals = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await apiClient('/admin/approvals');
       setItems(data.items || []);
     } catch (err) {
-      console.error('Failed to load approvals:', err);
-      setError(err.message || 'Failed to fetch pending approvals');
+      setError(err.message || 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchApprovals();
-  }, []);
+  }, [fetchApprovals]);
 
   const manufacturers = items.filter((u) => u.role === 'manufacturer');
   const drivers = items.filter((u) => u.role === 'driver');
-  const currentList = activeTab === 'manufacturer' ? manufacturers : drivers;
+  const list = activeTab === 'manufacturer' ? manufacturers : drivers;
+  const selectedIndex = list.findIndex((u) => u.id === selectedId);
+  const selected = selectedIndex >= 0 ? list[selectedIndex] : null;
+  const docs = useMemo(() => (selected ? documentsOf(selected, isAr) : []), [selected, isAr]);
+  const seen = (selected && viewed[selected.id]) || new Set();
+  const requiredDocs = docs.filter((d) => d.required);
+  const requiredSeen = requiredDocs.filter((d) => seen.has(d.id)).length;
+  const missingRequired = requiredDocs.filter((d) => !d.url).length;
 
-  const handleApprove = async (user) => {
+  const openDoc = (d) => {
+    setActiveDoc(d.id);
+    if (!selected) return;
+    setViewed((v) => {
+      const s = new Set(v[selected.id] || []);
+      s.add(d.id);
+      return { ...v, [selected.id]: s };
+    });
+  };
+
+  const openApplicant = (u) => {
+    setSelectedId(u.id);
+    setRejecting(false);
+    setRejectReason('');
+    const first = documentsOf(u, isAr).find((d) => d.url);
+    if (first) {
+      setActiveDoc(first.id);
+      setViewed((v) => ({ ...v, [u.id]: new Set([...(v[u.id] || []), first.id]) }));
+    } else setActiveDoc(null);
+  };
+
+  const step = (dir) => {
+    const next = list[selectedIndex + dir];
+    if (next) openApplicant(next);
+  };
+
+  // Esc closes, ←/→ moves between applicants
+  useEffect(() => {
+    if (!selected) return undefined;
+    const onKey = (e) => {
+      if (e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'Escape') setSelectedId(null);
+      if (e.key === 'ArrowRight') step(isAr ? -1 : 1);
+      if (e.key === 'ArrowLeft') step(isAr ? 1 : -1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  const afterDecision = async () => {
+    const nextUp = list[selectedIndex + 1] || list[selectedIndex - 1];
+    await fetchApprovals();
+    if (nextUp) openApplicant(nextUp);
+    else setSelectedId(null);
+  };
+
+  const handleApprove = async () => {
+    if (!selected) return;
     try {
       setActionLoading(true);
-      await apiClient(`/admin/users/${user.id}/approve`, {
-        method: 'POST',
-      });
-      setNotification({
-        type: 'success',
-        message: isAr
-          ? `تم اعتماد ${user.name} بنجاح`
-          : `Successfully approved ${user.name}`,
-      });
-      setSelectedUser(null);
-      await fetchApprovals();
+      await apiClient(`/admin/users/${selected.id}/approve`, { method: 'POST' });
+      toast.success(isAr ? `تم اعتماد ${selected.name}` : `${selected.name} approved`);
+      await afterDecision();
     } catch (err) {
-      toast.error(err.message || 'Failed to approve application');
+      toast.error(err.message || (isAr ? 'تعذّر الاعتماد' : "Couldn't approve. Try again."));
     } finally {
       setActionLoading(false);
     }
@@ -92,775 +206,459 @@ export default function AdminApprovals() {
 
   const handleReject = async (e) => {
     e.preventDefault();
-    if (!rejectReason.trim()) {
-      toast.error(isAr ? 'يرجى كتابة سبب الرفض' : 'Please provide a rejection reason');
-      return;
-    }
+    if (!rejectReason.trim() || !selected) return;
     try {
       setActionLoading(true);
-      await apiClient(`/admin/users/${rejectingUser.id}/reject`, {
+      await apiClient(`/admin/users/${selected.id}/reject`, {
         method: 'POST',
         body: JSON.stringify({ reason: rejectReason.trim() }),
       });
-      setNotification({
-        type: 'warning',
-        message: isAr
-          ? `تم رفض طلب ${rejectingUser.name}`
-          : `Application rejected for ${rejectingUser.name}`,
-      });
-      setRejectingUser(null);
+      toast.success(isAr ? `تم رفض طلب ${selected.name}` : `${selected.name} rejected`);
+      setRejecting(false);
       setRejectReason('');
-      setSelectedUser(null);
-      await fetchApprovals();
+      await afterDecision();
     } catch (err) {
-      toast.error(err.message || 'Failed to reject application');
+      toast.error(err.message || (isAr ? 'تعذّر الرفض' : "Couldn't reject. Try again."));
     } finally {
       setActionLoading(false);
     }
   };
 
-  const presetReasons = isAr
-    ? [
-        'وثائق السجل التجاري غير واضحة أو منتهية الصلاحية',
-        'رخصة القيادة غير مطابقة لفئة الشاحنة المسجلة',
-        'صور الشاحنة غير مكتملة أو لوحة الأرقام غير واضحة',
-        'الرقم الضريبي أو الرقم الوطني غير مطابق',
-      ]
-    : [
-        'Registration documents unreadable or expired',
-        'Driver license class does not match truck category',
-        'Truck photos incomplete or plate not visible',
-        'Tax ID or National ID mismatch with official registry',
-      ];
+  const presetReasons =
+    selected?.role === 'driver'
+      ? isAr
+        ? ['رخصة القيادة غير واضحة أو منتهية', 'فئة الرخصة لا تطابق فئة الشاحنة', 'صور الشاحنة غير واضحة أو اللوحة غير ظاهرة', 'رخصة الشاحنة غير مطابقة لرقم اللوحة']
+        : ['Driving license unreadable or expired', 'License class does not match the truck', 'Truck photos unclear or plate not visible', 'Truck license does not match the plate number']
+      : isAr
+      ? ['السجل التجاري غير واضح أو منتهي', 'رخصة المهن مفقودة أو منتهية', 'اسم الشركة لا يطابق الوثائق']
+      : ['Commercial registration unreadable or expired', 'Professions license missing or expired', 'Company name does not match the documents'];
+
+  const current = docs.find((d) => d.id === activeDoc);
+  const p = selected?.profile || {};
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-navy-900 tracking-tight flex items-center gap-2">
-            <UserCheck className="w-6 h-6 text-emerald-600" />
-            {isAr ? 'طلبات الانضمام والاعتماد' : 'Pending Approvals'}
-          </h1>
-          <p className="text-xs text-ink-muted mt-1">
-            {isAr
-              ? 'مراجعة وتدقيق وثائق المصانع والسائقين الجدد قبل تفعيل حساباتهم'
-              : 'Review and verify new manufacturer and driver profiles before activation'}
-          </p>
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="text-[28px] font-extrabold text-navy-900 tracking-tight leading-tight">{isAr ? 'طلبات الانضمام' : 'Approvals'}</h1>
+        <p className="text-sm text-ink-muted mt-1">
+          {isAr ? 'راجع وثائق المصانع والسائقين الجدد قبل تفعيل حساباتهم.' : 'Check new manufacturers and drivers against their documents before their accounts go live.'}
+        </p>
+      </div>
 
-        {notification && (
-          <div className="px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
-            <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{notification.message}</span>
+      {/* Tabs as two summary tiles */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" role="tablist">
+        {[
+          { id: 'manufacturer', icon: Building2, label: isAr ? 'مصانع' : 'Manufacturers', count: manufacturers.length },
+          { id: 'driver', icon: Truck, label: isAr ? 'سائقون' : 'Drivers', count: drivers.length },
+        ].map((tb) => {
+          const on = activeTab === tb.id;
+          return (
             <button
-              onClick={() => setNotification(null)}
-              className="ms-2 text-slate-400 hover:text-navy-900"
+              key={tb.id}
+              role="tab"
+              aria-selected={on}
+              onClick={() => {
+                setActiveTab(tb.id);
+                setSelectedId(null);
+              }}
+              className={`text-start rounded-2xl border p-4 flex items-center gap-4 transition ${
+                on ? 'bg-navy-900 border-navy-900 text-white' : 'bg-card border-line hover:border-navy-700/40'
+              }`}
             >
-              ×
+              <span className={`h-11 w-11 rounded-xl flex items-center justify-center ${on ? 'bg-amber-500 text-navy-900' : 'bg-navy-100 text-navy-700'}`}>
+                <tb.icon className="h-5 w-5" />
+              </span>
+              <span className="flex-1">
+                <span className={`block text-sm font-bold ${on ? 'text-navy-100' : 'text-ink-muted'}`}>{tb.label}</span>
+                <span className={`block text-2xl font-extrabold tabular-nums ${on ? 'text-white' : 'text-navy-900'}`}>
+                  {tb.count} <span className={`text-sm font-bold ${on ? 'text-navy-100' : 'text-ink-muted'}`}>{isAr ? 'بانتظار المراجعة' : 'waiting'}</span>
+                </span>
+              </span>
             </button>
-          </div>
-        )}
+          );
+        })}
       </div>
 
-      {/* Role Tabs */}
-      <div className="flex items-center gap-2 border-b border-line">
-        <button
-          onClick={() => setActiveTab('manufacturer')}
-          className={`pb-3 px-4 text-xs font-bold transition-all relative flex items-center gap-2 ${
-            activeTab === 'manufacturer'
-              ? 'text-navy-900 border-b-2 border-emerald-600'
-              : 'text-ink-muted hover:text-navy-900'
-          }`}
-        >
-          <Building2 className="w-4 h-4" />
-          <span>{isAr ? 'المصانع' : 'Manufacturers'}</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-              manufacturers.length > 0
-                ? 'bg-amber-100 text-amber-800'
-                : 'bg-slate-100 text-slate-600'
-            }`}
-          >
-            {manufacturers.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('driver')}
-          className={`pb-3 px-4 text-xs font-bold transition-all relative flex items-center gap-2 ${
-            activeTab === 'driver'
-              ? 'text-navy-900 border-b-2 border-emerald-600'
-              : 'text-ink-muted hover:text-navy-900'
-          }`}
-        >
-          <Truck className="w-4 h-4" />
-          <span>{isAr ? 'السائقون' : 'Drivers'}</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-              drivers.length > 0
-                ? 'bg-amber-100 text-amber-800'
-                : 'bg-slate-100 text-slate-600'
-            }`}
-          >
-            {drivers.length}
-          </span>
-        </button>
-      </div>
-
-      {/* Main Content Area */}
+      {/* Queue */}
       {loading ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-3">
-          <TruckLoader size="md" />
-          <span className="text-xs text-ink-muted font-medium">
-            {isAr ? 'جاري تحميل الطلبات...' : 'Loading pending requests...'}
-          </span>
+        <div className="bg-card rounded-2xl border border-line py-16 flex justify-center">
+          <TruckLoader message={isAr ? 'جاري تحميل الطلبات…' : 'Loading applications…'} />
         </div>
       ) : error ? (
-        <div className="p-8 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-3">
-          <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
-          <p className="text-xs text-rose-700 font-semibold">{error}</p>
-          <button
-            onClick={fetchApprovals}
-            className="px-4 py-2 rounded-xl bg-navy-900 text-white text-xs font-semibold hover:bg-navy-800"
-          >
-            {isAr ? 'إعادة المحاولة' : 'Try Again'}
+        <div className="rounded-2xl border border-[#FECACA] bg-[#FEE2E2] p-5 flex items-center justify-between gap-4">
+          <p className="text-sm text-[#B91C1C]">{isAr ? 'تعذّر تحميل الطلبات. تحقّق من الاتصال وحاول مجدداً.' : "Couldn't load applications. Check your connection and try again."}</p>
+          <button onClick={fetchApprovals} className="h-9 px-4 rounded-lg bg-navy-900 text-white text-sm font-bold">
+            {isAr ? 'إعادة المحاولة' : 'Retry'}
           </button>
         </div>
-      ) : currentList.length === 0 ? (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center space-y-3">
-          <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto opacity-70" />
-          <h3 className="text-sm font-bold text-navy-900">
-            {isAr ? 'لا توجد طلبات معلقة حالياً' : 'All caught up! No pending requests'}
-          </h3>
-          <p className="text-xs text-ink-muted max-w-sm mx-auto">
-            {isAr
-              ? 'تمت مراجعة جميع طلبات التسجيل المقدمة بالكامل.'
-              : 'All registration submissions have been audited and resolved.'}
+      ) : list.length === 0 ? (
+        <div className="bg-card rounded-2xl border border-line py-16 text-center">
+          <div className="mx-auto h-14 w-14 rounded-full bg-[#DCFCE7] text-[#15803D] flex items-center justify-center mb-3">
+            <UserCheck className="h-6 w-6" />
+          </div>
+          <p className="text-base font-bold text-navy-900">{isAr ? 'لا طلبات معلّقة' : "You're all caught up"}</p>
+          <p className="text-sm text-ink-muted mt-1">
+            {activeTab === 'manufacturer'
+              ? isAr ? 'المصانع الجديدة التي تسجّل ستظهر هنا.' : 'New manufacturer sign-ups will appear here.'
+              : isAr ? 'السائقون الجدد الذين يسجّلون سيظهرون هنا.' : 'New driver sign-ups will appear here.'}
           </p>
         </div>
       ) : (
-        <div className="bg-card rounded-2xl border border-line shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-50/80 border-b border-line text-ink-muted font-semibold">
-                  <th className="py-3 px-4 text-start">{isAr ? 'مقدم الطلب' : 'Applicant'}</th>
-                  <th className="py-3 px-4 text-start">{isAr ? 'معلومات الاتصال' : 'Contact'}</th>
-                  <th className="py-3 px-4 text-start">
-                    {activeTab === 'manufacturer'
-                      ? isAr ? 'السجل / الضريبة' : 'Reg / Tax #'
-                      : isAr ? 'فئة الشاحنة واللوحة' : 'Truck & Plate'}
-                  </th>
-                  <th className="py-3 px-4 text-start">{isAr ? 'تاريخ التقديم' : 'Submitted'}</th>
-                  <th className="py-3 px-4 text-end">{isAr ? 'الإجراءات' : 'Actions'}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {currentList.map((u) => {
-                  const p = u.profile || {};
-                  return (
-                    <tr
-                      key={u.id}
-                      onClick={() => setSelectedUser(u)}
-                      className="hover:bg-slate-50/70 transition-colors cursor-pointer group"
-                    >
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-navy-900 group-hover:text-emerald-700 transition-colors flex items-center gap-2">
-                          {u.name}
-                          {p.trade_name && (
-                            <span className="text-[10px] text-ink-muted font-normal">
-                              ({p.trade_name})
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-slate-400" />
-                          <span>{p.city || p.location?.city || 'Jordan'}</span>
-                        </div>
-                      </td>
+        <ul className="space-y-3">
+          {list.map((u) => {
+            const w = waited(u.created_at, isAr);
+            const d = documentsOf(u, isAr);
+            const req = d.filter((x) => x.required);
+            const uploaded = req.filter((x) => x.url).length;
+            const pr = u.profile || {};
+            return (
+              <li key={u.id} className="bg-card rounded-2xl border border-line p-4 flex flex-col lg:flex-row lg:items-center gap-4">
+                <div className="flex items-center gap-3 min-w-0 lg:w-[30%]">
+                  <span className="h-11 w-11 shrink-0 rounded-full bg-navy-100 text-navy-700 text-sm font-extrabold flex items-center justify-center">
+                    {initials(u.name)}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-[15px] font-bold text-navy-900 truncate">{u.name}</div>
+                    <div className="text-xs text-ink-muted truncate">
+                      {u.role === 'manufacturer'
+                        ? pr.contact_person || (pr.category_names || []).join(' · ')
+                        : `${isAr ? 'رخصة فئة' : 'License class'} ${pr.license_class} · ${isAr ? pr.type_name_ar : pr.type_name_en}`}
+                    </div>
+                  </div>
+                </div>
 
-                      <td className="py-3.5 px-4 space-y-0.5">
-                        <div className="text-slate-700 font-mono text-[11px] flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-slate-400" />
-                          <span>{u.phone}</span>
-                        </div>
-                        {u.email && (
-                          <div className="text-slate-500 text-[11px] flex items-center gap-1">
-                            <Mail className="w-3 h-3 text-slate-400" />
-                            <span className="truncate max-w-[140px]">{u.email}</span>
-                          </div>
-                        )}
-                      </td>
+                <div className="flex flex-col gap-1 text-xs text-ink lg:w-[24%] min-w-0" dir="ltr">
+                  <span className="inline-flex items-center gap-1.5 truncate"><Phone className="h-3.5 w-3.5 text-ink-muted" />{u.phone || '—'}</span>
+                  <span className="inline-flex items-center gap-1.5 truncate"><Mail className="h-3.5 w-3.5 text-ink-muted" />{u.email || '—'}</span>
+                </div>
 
-                      <td className="py-3.5 px-4">
-                        {activeTab === 'manufacturer' ? (
-                          <div className="space-y-0.5">
-                            <div className="font-mono text-slate-700">
-                              <span className="text-[10px] text-slate-400 me-1">CR:</span>
-                              {p.registration_number || '—'}
-                            </div>
-                            <div className="font-mono text-slate-500 text-[10px]">
-                              <span className="text-[10px] text-slate-400 me-1">TAX:</span>
-                              {p.tax_number || '—'}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-0.5">
-                            <div className="font-bold text-navy-900">
-                              {isAr ? p.body_name_ar || p.type_name_ar : p.body_name_en || p.type_name_en || 'Truck'}
-                            </div>
-                            <div className="text-[11px] font-mono text-slate-500">
-                              {p.plate_number ? `Plate: ${p.plate_number}` : '—'}
-                            </div>
-                          </div>
-                        )}
-                      </td>
+                <div className="flex flex-wrap items-center gap-2 lg:flex-1">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+                    uploaded === req.length ? 'bg-[#DCFCE7] text-[#15803D]' : 'bg-[#FEE2E2] text-[#B91C1C]'
+                  }`}>
+                    <FileText className="h-3.5 w-3.5" />
+                    {uploaded}/{req.length} {isAr ? 'وثائق' : 'documents'}
+                  </span>
+                  {u.role === 'driver' && (pr.truck_photos || []).length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold bg-navy-100 text-navy-700">
+                      <ImageIcon className="h-3.5 w-3.5" />
+                      {pr.truck_photos.length} {isAr ? 'صور' : 'photos'}
+                    </span>
+                  )}
+                  <span
+                    title={formatDateTime(u.created_at)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+                      w.late ? 'bg-amber-100 text-[#8A5A00]' : 'bg-surface text-ink-muted'
+                    }`}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    {isAr ? `ينتظر منذ ${w.text}` : `Waiting ${w.text}`}
+                  </span>
+                </div>
 
-                      <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
-                        {formatDateTime(u.created_at)}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-end">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedUser(u);
-                          }}
-                          className="px-3 py-1.5 rounded-lg border border-line bg-white hover:bg-slate-50 text-navy-900 text-xs font-semibold shadow-2xs inline-flex items-center gap-1.5"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-slate-500" />
-                          <span>{isAr ? 'فحص الوثائق' : 'Inspect'}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                <button
+                  onClick={() => openApplicant(u)}
+                  className="shrink-0 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
+                >
+                  <ClipboardCheck className="h-4 w-4 text-amber-500" />
+                  {isAr ? 'مراجعة الطلب' : 'Review application'}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
-      {/* Side Inspection Drawer */}
-      {selectedUser && (
-        <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-navy-900/40 backdrop-blur-xs transition-opacity"
-            onClick={() => setSelectedUser(null)}
-          />
-
-          {/* Drawer Container */}
-          <div className="relative w-full max-w-2xl bg-card h-full shadow-2xl flex flex-col z-10 animate-slide-in">
-            {/* Drawer Header */}
-            <div className="p-5 border-b border-line bg-slate-50/90 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wide bg-amber-100 text-amber-800">
-                    {selectedUser.role}
+      {/* Review workspace */}
+      {selected && (
+        <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label={selected.name}>
+          <div className="absolute inset-0 bg-navy-900/50 backdrop-blur-[2px]" onClick={() => setSelectedId(null)} />
+          <div className="relative ms-auto h-full w-full max-w-[1180px] bg-surface shadow-2xl flex flex-col">
+            {/* Header */}
+            <header className="bg-card border-b border-line px-6 py-4 flex items-center gap-4">
+              <span className="h-12 w-12 shrink-0 rounded-full bg-navy-900 text-amber-500 text-sm font-extrabold flex items-center justify-center">
+                {initials(selected.name)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg font-extrabold text-navy-900 truncate">{selected.name}</h2>
+                  <span className="rounded-full bg-navy-100 text-navy-700 px-2.5 py-0.5 text-xs font-bold">
+                    {selected.role === 'manufacturer' ? (isAr ? 'مصنع' : 'Manufacturer') : isAr ? 'سائق' : 'Driver'}
                   </span>
-                  <h2 className="text-base font-black text-navy-900">{selectedUser.name}</h2>
                 </div>
-                <p className="text-[11px] text-ink-muted mt-0.5">
-                  {isAr ? 'تاريخ التقديم:' : 'Applied on:'} {formatDateTime(selectedUser.created_at)}
+                <p className="text-xs text-ink-muted mt-0.5">
+                  {isAr ? 'قدّم الطلب' : 'Applied'} {formatDateTime(selected.created_at)} · {isAr ? 'ينتظر منذ' : 'waiting'} {waited(selected.created_at, isAr).text}
                 </p>
               </div>
-
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-navy-900 hover:bg-slate-200 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Drawer Scrollable Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Manufacturer Details */}
-              {selectedUser.role === 'manufacturer' && (
-                <div className="space-y-6">
-                  {/* Basic & Commercial Info */}
-                  <div className="rounded-2xl border border-line p-4 space-y-3 bg-white">
-                    <h3 className="text-xs font-bold text-navy-900 border-b border-line pb-2 flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-emerald-600" />
-                      {isAr ? 'البيانات التجارية والقانونية' : 'Commercial & Legal Details'}
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'اسم الشركة الرسمي' : 'Official Name'}
-                        </span>
-                        <span className="font-bold text-navy-900">{selectedUser.name}</span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'الاسم التجاري' : 'Trade Name'}
-                        </span>
-                        <span className="font-semibold text-navy-900">
-                          {selectedUser.profile?.trade_name || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'رقم السجل التجاري' : 'Registration Number'}
-                        </span>
-                        <span className="font-mono font-bold text-navy-900">
-                          {selectedUser.profile?.registration_number || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'الرقم الضريبي' : 'Tax / VAT Number'}
-                        </span>
-                        <span className="font-mono font-bold text-navy-900">
-                          {selectedUser.profile?.tax_number || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'المدينة والمنطقة الصناعية' : 'City & Industrial Area'}
-                        </span>
-                        <span className="font-medium text-navy-900">
-                          {selectedUser.profile?.city || '—'}
-                          {selectedUser.profile?.industrial_area
-                            ? ` (${selectedUser.profile.industrial_area})`
-                            : ''}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'الموقع الإلكتروني' : 'Website'}
-                        </span>
-                        {selectedUser.profile?.website ? (
-                          <a
-                            href={selectedUser.profile.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-emerald-700 hover:underline flex items-center gap-1 font-mono text-[11px]"
-                          >
-                            <span>{selectedUser.profile.website}</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        ) : (
-                          '—'
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Goods Categories */}
-                  {selectedUser.profile?.category_names?.length > 0 && (
-                    <div className="rounded-2xl border border-line p-4 space-y-2 bg-white">
-                      <h4 className="text-xs font-bold text-navy-900">
-                        {isAr ? 'فئات البضائع المنتجة' : 'Goods Categories Produced'}
-                      </h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedUser.profile.category_names.map((cat, i) => (
-                          <span
-                            key={i}
-                            className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-medium"
-                          >
-                            {cat}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Documents Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-navy-900 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-emerald-600" />
-                      {isAr ? 'الوثائق الرسمية المرفقة' : 'Submitted Documents (PDF)'}
-                    </h3>
-
-                    {/* Commercial Registration PDF */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-700">
-                        {isAr ? 'شهادة السجل التجاري' : 'Commercial Registration'}
-                      </label>
-                      <PdfViewer
-                        url={selectedUser.profile?.commercial_registration_url}
-                        title={`${selectedUser.name}-CR.pdf`}
-                      />
-                    </div>
-
-                    {/* Professions License PDF */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-700">
-                        {isAr ? 'رخصة المهن سارية المفعول' : 'Professions License'}
-                      </label>
-                      <PdfViewer
-                        url={selectedUser.profile?.professions_license_url}
-                        title={`${selectedUser.name}-ProfessionsLicense.pdf`}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Driver Details */}
-              {selectedUser.role === 'driver' && (
-                <div className="space-y-6">
-                  {/* Personal & License Info */}
-                  <div className="rounded-2xl border border-line p-4 space-y-3 bg-white">
-                    <h3 className="text-xs font-bold text-navy-900 border-b border-line pb-2 flex items-center gap-2">
-                      <Truck className="w-4 h-4 text-emerald-600" />
-                      {isAr ? 'البيانات الشخصية ورخصة القيادة' : 'Driver & License Details'}
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'الاسم الكامل' : 'Full Name'}
-                        </span>
-                        <span className="font-bold text-navy-900">{selectedUser.name}</span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'الجنسية' : 'Nationality'}
-                        </span>
-                        <span className="font-semibold text-navy-900">
-                          {selectedUser.profile?.nationality || 'Jordanian'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'الرقم الوطني / الإقامة' : 'National ID / Residency #'}
-                        </span>
-                        <span className="font-mono font-bold text-navy-900">
-                          {selectedUser.profile?.national_id || selectedUser.profile?.passport_number || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'رقم رخصة القيادة' : 'Driver License #'}
-                        </span>
-                        <span className="font-mono font-bold text-navy-900">
-                          {selectedUser.profile?.license_number || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'فئة الرخصة' : 'License Class'}
-                        </span>
-                        <span className="font-semibold text-navy-900">
-                          {selectedUser.profile?.license_class || 'Class 6 (Trailer / قاطرة ومقطورة)'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'انتهاء الرخصة' : 'License Expiry'}
-                        </span>
-                        <span className="font-mono text-navy-900">
-                          {selectedUser.profile?.license_expiry_date || '—'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Payout Account */}
-                  <div className="rounded-2xl border border-line p-4 space-y-2 bg-white">
-                    <h4 className="text-xs font-bold text-navy-900">
-                      {isAr ? 'حساب تحويل المستحقات المالية' : 'Payout Account'}
-                    </h4>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="text-ink-muted block text-[10px]">
-                          {isAr ? 'طريقة التحويل' : 'Method'}
-                        </span>
-                        <span className="font-bold uppercase text-navy-900">
-                          {selectedUser.profile?.payout_method || 'IBAN'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[10px]">
-                          {isAr ? 'البنك أو المعرف' : 'Bank / Alias'}
-                        </span>
-                        <span className="font-medium text-navy-900">
-                          {selectedUser.profile?.bank_name || selectedUser.profile?.cliq_alias || '—'}
-                        </span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-ink-muted block text-[10px]">
-                          {isAr ? 'رقم الآيبان / الحساب' : 'IBAN'}
-                        </span>
-                        <span className="font-mono font-bold text-navy-900">
-                          {selectedUser.profile?.iban || '—'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Truck Specifications */}
-                  <div className="rounded-2xl border border-line p-4 space-y-3 bg-white">
-                    <h3 className="text-xs font-bold text-navy-900 border-b border-line pb-2 flex items-center gap-2">
-                      <Truck className="w-4 h-4 text-emerald-600" />
-                      {isAr ? 'مواصفات الشاحنة المسجلة' : 'Registered Truck Details'}
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'رقم اللوحة' : 'Plate Number'}
-                        </span>
-                        <span className="font-mono font-bold text-navy-900">
-                          {selectedUser.profile?.plate_number || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'فئة الهيكل' : 'Body Type'}
-                        </span>
-                        <span className="font-semibold text-navy-900">
-                          {isAr
-                            ? selectedUser.profile?.body_name_ar || selectedUser.profile?.type_name_ar
-                            : selectedUser.profile?.body_name_en || selectedUser.profile?.type_name_en || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'نظام التبريد' : 'Cooling / Refrigerator'}
-                        </span>
-                        <span className="font-semibold">
-                          {selectedUser.profile?.cooling ? '❄️ Active' : '✕ None'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-ink-muted block text-[11px]">
-                          {isAr ? 'شهادة نقل المواد الخطرة (ADR)' : 'ADR Certified'}
-                        </span>
-                        <span className="font-semibold">
-                          {selectedUser.profile?.adr_certified ? '⚠️ Certified' : '✕ No'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Truck Photos Gallery */}
-                  {selectedUser.profile?.truck_photos?.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-xs font-bold text-navy-900">
-                        {isAr ? 'صور الشاحنة' : 'Truck Inspection Photos'}
-                      </h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        {selectedUser.profile.truck_photos.map((url, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => setPreviewPhoto(url)}
-                            className="aspect-video bg-slate-100 rounded-xl overflow-hidden border border-line cursor-pointer hover:opacity-90 transition-opacity"
-                          >
-                            <img
-                              src={url}
-                              alt={`Truck ${idx + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Documents Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-navy-900 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-emerald-600" />
-                      {isAr ? 'الوثائق الرسمية المرفقة' : 'Attached Documents'}
-                    </h3>
-
-                    {/* Driver License PDF */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-700">
-                        {isAr ? 'رخصة القيادة' : "Driver's License"}
-                      </label>
-                      <PdfViewer
-                        url={selectedUser.profile?.license_doc_url}
-                        title={`${selectedUser.name}-DriverLicense.pdf`}
-                      />
-                    </div>
-
-                    {/* Truck License PDF */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-700">
-                        {isAr ? 'رخصة اقتناء الشاحنة' : 'Truck Registration Document'}
-                      </label>
-                      <PdfViewer
-                        url={selectedUser.profile?.truck_license_doc_url}
-                        title={`${selectedUser.name}-TruckRegistration.pdf`}
-                      />
-                    </div>
-
-                    {/* ADR Certificate PDF */}
-                    {selectedUser.profile?.adr_doc_url && (
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-amber-800">
-                          {isAr ? 'شهادة نقل المواد الخطرة (ADR Certificate)' : 'ADR Safety Certificate'}
-                        </label>
-                        <PdfViewer
-                          url={selectedUser.profile.adr_doc_url}
-                          title={`${selectedUser.name}-ADR-Certificate.pdf`}
-                        />
-                      </div>
-                    )}
-
-                    {/* ID / Passport PDF */}
-                    {(selectedUser.profile?.id_doc_url || selectedUser.profile?.passport_doc_url) && (
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-700">
-                          {isAr ? 'الهوية الوطنية / الجواز' : 'National ID / Passport'}
-                        </label>
-                        <PdfViewer
-                          url={
-                            selectedUser.profile?.id_doc_url ||
-                            selectedUser.profile?.passport_doc_url
-                          }
-                          title={`${selectedUser.name}-Identity.pdf`}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Drawer Bottom Action Bar */}
-            <div className="p-4 border-t border-line bg-slate-50 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => setRejectingUser(selectedUser)}
-                disabled={actionLoading}
-                className="px-4 py-2.5 rounded-xl border border-rose-300 bg-white hover:bg-rose-50 text-rose-700 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                <XCircle className="w-4 h-4 text-rose-600" />
-                <span>{isAr ? 'رفض الطلب' : 'Reject Application'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleApprove(selectedUser)}
-                disabled={actionLoading}
-                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-xs transition-colors disabled:opacity-50"
-              >
-                <CheckCircle className="w-4 h-4" />
-                <span>
-                  {actionLoading
-                    ? isAr ? 'جاري الاعتماد...' : 'Approving...'
-                    : isAr ? 'اعتماد وتفعيل الحساب' : 'Approve & Activate'}
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-semibold text-ink-muted tabular-nums me-2">
+                  {selectedIndex + 1} / {list.length}
                 </span>
-              </button>
+                <button
+                  onClick={() => step(-1)}
+                  disabled={selectedIndex <= 0}
+                  aria-label={isAr ? 'الطلب السابق' : 'Previous application'}
+                  className="h-9 w-9 rounded-lg border border-line flex items-center justify-center hover:bg-surface disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4 rtl:-scale-x-100" />
+                </button>
+                <button
+                  onClick={() => step(1)}
+                  disabled={selectedIndex >= list.length - 1}
+                  aria-label={isAr ? 'الطلب التالي' : 'Next application'}
+                  className="h-9 w-9 rounded-lg border border-line flex items-center justify-center hover:bg-surface disabled:opacity-40"
+                >
+                  <ChevronRight className="h-4 w-4 rtl:-scale-x-100" />
+                </button>
+                <button
+                  onClick={() => setSelectedId(null)}
+                  aria-label={isAr ? 'إغلاق' : 'Close'}
+                  className="ms-2 h-9 w-9 rounded-lg flex items-center justify-center text-ink-muted hover:bg-surface hover:text-ink"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </header>
+
+            {/* Body: details | documents */}
+            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[400px_1fr]">
+              <div className="overflow-y-auto p-5 space-y-4 border-e border-line bg-card">
+                {selected.role === 'manufacturer' ? (
+                  <>
+                    <Section icon={Building2} title={isAr ? 'الشركة' : 'Company'}>
+                      <Field label={isAr ? 'اسم الشركة' : 'Company name'}>{selected.name}</Field>
+                      <Field label={isAr ? 'الشخص المسؤول' : 'Contact person'}>{p.contact_person}</Field>
+                      <div className="col-span-2">
+                        <Field label={isAr ? 'فئات البضائع' : 'Goods categories'}>
+                          <span className="flex flex-wrap gap-1.5 mt-1">
+                            {(p.category_names || []).map((c) => (
+                              <span key={c} className="rounded-full bg-amber-100 text-[#8A5A00] px-2.5 py-0.5 text-xs font-bold">{c}</span>
+                            ))}
+                          </span>
+                        </Field>
+                      </div>
+                    </Section>
+                    <Section icon={Phone} title={isAr ? 'التواصل' : 'Contacts'}>
+                      <div className="col-span-2 space-y-2" dir="ltr">
+                        {(p.phones?.length ? p.phones : [selected.phone]).filter(Boolean).map((ph) => (
+                          <a key={ph} href={`tel:${ph}`} className="flex items-center gap-2 text-sm font-semibold text-navy-900 hover:underline">
+                            <Phone className="h-3.5 w-3.5 text-ink-muted" /> {ph}
+                          </a>
+                        ))}
+                        {(p.emails?.length ? p.emails : [selected.email]).filter(Boolean).map((em) => (
+                          <a key={em} href={`mailto:${em}`} className="flex items-center gap-2 text-sm font-semibold text-navy-900 hover:underline">
+                            <Mail className="h-3.5 w-3.5 text-ink-muted" /> {em}
+                          </a>
+                        ))}
+                      </div>
+                    </Section>
+                  </>
+                ) : (
+                  <>
+                    <Section icon={UserCheck} title={isAr ? 'السائق' : 'Driver'}>
+                      <Field label={isAr ? 'الاسم' : 'Name'}>{selected.name}</Field>
+                      <Field label={isAr ? 'الهاتف' : 'Phone'}><span dir="ltr">{selected.phone}</span></Field>
+                      <Field label={isAr ? 'فئة الرخصة' : 'License class'}>
+                        {p.license_class}
+                        {LICENSE_HINT[p.license_class] && (
+                          <span className="block text-xs font-medium text-ink-muted">{isAr ? LICENSE_HINT[p.license_class].ar : LICENSE_HINT[p.license_class].en}</span>
+                        )}
+                      </Field>
+                      <Field label={isAr ? 'نطاق العمل' : 'Scope'}>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Globe2 className="h-3.5 w-3.5 text-ink-muted" />
+                          {p.scope === 'external' ? (isAr ? 'داخلي وخارجي' : 'Internal + external') : isAr ? 'داخلي فقط' : 'Internal only'}
+                        </span>
+                      </Field>
+                      {selected.email && <div className="col-span-2"><Field label={isAr ? 'البريد' : 'Email'}><span dir="ltr">{selected.email}</span></Field></div>}
+                    </Section>
+                    <Section icon={Truck} title={isAr ? 'الشاحنة' : 'Truck'}>
+                      <Field label={isAr ? 'رقم اللوحة' : 'Plate number'} mono><span dir="ltr">{p.plate_number}</span></Field>
+                      <Field label={isAr ? 'الفئة' : 'Category'}>{CATEGORY_LABEL[p.truck_category]?.[isAr ? 1 : 0] || p.truck_category}</Field>
+                      <Field label={isAr ? 'النوع' : 'Type'}>{isAr ? p.type_name_ar : p.type_name_en}</Field>
+                      <Field label={isAr ? 'الصندوق' : 'Body'}>{isAr ? p.body_name_ar : p.body_name_en}</Field>
+                      <div className="col-span-2 flex flex-wrap gap-1.5">
+                        {p.cooling && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[#DBEAFE] text-[#1D4ED8] px-2.5 py-0.5 text-xs font-bold">
+                            <Snowflake className="h-3 w-3" /> {isAr ? 'تبريد' : 'Cooling'}: {p.cooling}
+                          </span>
+                        )}
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${p.adr_certified ? 'bg-amber-100 text-[#8A5A00]' : 'bg-surface text-ink-muted'}`}>
+                          <AlertTriangle className="h-3 w-3" /> ADR {p.adr_certified ? (isAr ? 'معتمد' : 'certified') : isAr ? 'غير معتمد' : 'not certified'}
+                        </span>
+                      </div>
+                    </Section>
+                    <Section icon={Landmark} title={isAr ? 'حساب الصرف' : 'Payout account'}>
+                      <div className="col-span-2"><Field label="IBAN" mono><span dir="ltr">{p.iban}</span></Field></div>
+                      <Field label={isAr ? 'اسم CliQ' : 'CliQ alias'} mono><span dir="ltr">{p.cliq_alias}</span></Field>
+                    </Section>
+                  </>
+                )}
+
+                {/* Review checklist */}
+                <section className="rounded-2xl bg-surface p-4">
+                  <h3 className="text-sm font-bold text-navy-900 mb-1">{isAr ? 'قائمة المراجعة' : 'Review checklist'}</h3>
+                  <p className="text-xs text-ink-muted mb-3">
+                    {isAr ? `فتحت ${requiredSeen} من ${requiredDocs.length} وثائق مطلوبة` : `You've opened ${requiredSeen} of ${requiredDocs.length} required documents`}
+                  </p>
+                  <div className="h-1.5 rounded-full bg-line overflow-hidden mb-3">
+                    <div className="h-full bg-[#16A34A] transition-[width]" style={{ width: `${requiredDocs.length ? (requiredSeen / requiredDocs.length) * 100 : 0}%` }} />
+                  </div>
+                  <ul className="space-y-1.5">
+                    {requiredDocs.map((d) => (
+                      <li key={d.id} className="flex items-center gap-2 text-xs">
+                        <span className={`h-4 w-4 rounded-full flex items-center justify-center ${seen.has(d.id) ? 'bg-[#16A34A] text-white' : !d.url ? 'bg-[#FEE2E2] text-[#B91C1C]' : 'bg-card border border-line'}`}>
+                          {seen.has(d.id) ? <Check className="h-3 w-3" /> : !d.url ? <X className="h-3 w-3" /> : null}
+                        </span>
+                        <span className={seen.has(d.id) ? 'text-navy-900 font-semibold' : 'text-ink-muted'}>{d.label}</span>
+                        {!d.url && <span className="text-[#B91C1C] font-bold">{isAr ? 'مفقودة' : 'missing'}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+
+              {/* Documents */}
+              <div className="min-h-0 flex flex-col p-5 gap-3">
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {docs.map((d) => {
+                    const on = d.id === activeDoc;
+                    return (
+                      <button
+                        key={d.id}
+                        disabled={!d.url}
+                        onClick={() => openDoc(d)}
+                        className={`shrink-0 inline-flex items-center gap-2 h-10 px-3 rounded-xl border text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                          on ? 'bg-navy-900 border-navy-900 text-white' : 'bg-card border-line text-navy-900 hover:border-navy-700/40'
+                        }`}
+                      >
+                        {d.kind === 'image' ? <ImageIcon className={`h-4 w-4 ${on ? 'text-amber-500' : 'text-ink-muted'}`} /> : <FileText className={`h-4 w-4 ${on ? 'text-amber-500' : 'text-ink-muted'}`} />}
+                        {d.label}
+                        {seen.has(d.id) && <CheckCircle2 className={`h-3.5 w-3.5 ${on ? 'text-amber-500' : 'text-[#16A34A]'}`} />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex-1 min-h-[360px] rounded-2xl border border-line bg-card overflow-hidden flex flex-col">
+                  {current?.url ? (
+                    <>
+                      <div className="h-11 px-4 border-b border-line flex items-center justify-between">
+                        <span className="text-sm font-bold text-navy-900 truncate">{current.label}</span>
+                        <span className="flex items-center gap-1">
+                          <a href={current.url} target="_blank" rel="noreferrer" className="h-8 px-2.5 rounded-lg hover:bg-surface text-xs font-bold text-navy-900 inline-flex items-center gap-1.5">
+                            <ExternalLink className="h-3.5 w-3.5" /> {isAr ? 'فتح' : 'Open'}
+                          </a>
+                          <a href={current.url} download className="h-8 px-2.5 rounded-lg hover:bg-surface text-xs font-bold text-navy-900 inline-flex items-center gap-1.5">
+                            <Download className="h-3.5 w-3.5" /> {isAr ? 'تنزيل' : 'Download'}
+                          </a>
+                        </span>
+                      </div>
+                      {current.kind === 'image' ? (
+                        <div className="flex-1 bg-surface flex items-center justify-center p-4">
+                          <img src={current.url} alt={current.label} className="max-h-full max-w-full rounded-lg object-contain" />
+                        </div>
+                      ) : (
+                        <iframe key={current.url} src={current.url} title={current.label} className="flex-1 w-full bg-surface" />
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                      <FileText className="h-8 w-8 text-ink-muted mb-2" />
+                      <p className="text-sm font-bold text-navy-900">{isAr ? 'اختر وثيقة لعرضها' : 'Pick a document to view it'}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Reject Modal with Reason requirement */}
-      {rejectingUser && (
-        <div className="fixed inset-0 z-60 overflow-y-auto flex items-center justify-center p-4 bg-navy-900/50 backdrop-blur-xs">
-          <div className="bg-card w-full max-w-lg rounded-2xl border border-line shadow-2xl p-6 space-y-4 animate-scale-in">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-navy-900 flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-rose-600" />
-                {isAr ? 'تأكيد رفض طلب الانضمام' : 'Reject Application'}
-              </h3>
-              <button
-                onClick={() => setRejectingUser(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-navy-900"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-ink-muted">
-              {isAr
-                ? `يرجى تحديد سبب رفض طلب ${rejectingUser.name}. سيتم إشعار المستخدم بالسبب لتصحيحه.`
-                : `Please specify the reason for rejecting ${rejectingUser.name}'s application. This will be shown to the applicant.`}
-            </p>
-
-            {/* Quick preset reasons */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-700">
-                {isAr ? 'أسباب شائعة جاهزة:' : 'Common reasons:'}
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {presetReasons.map((reason, idx) => (
+            {/* Decision bar */}
+            <footer className="bg-card border-t border-line px-6 py-4">
+              {rejecting ? (
+                <form onSubmit={handleReject} className="space-y-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    {presetReasons.map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRejectReason(r)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                          rejectReason === r ? 'bg-[#FEE2E2] border-[#FECACA] text-[#B91C1C]' : 'bg-surface border-line text-ink hover:border-navy-700/30'
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-col md:flex-row gap-3 md:items-end">
+                    <label className="flex-1">
+                      <span className="text-xs font-bold text-navy-900">
+                        {isAr ? 'سبب الرفض (سيظهر لمقدّم الطلب)' : 'Reason (the applicant will see this)'}
+                      </span>
+                      <textarea
+                        autoFocus
+                        required
+                        rows={2}
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-line px-3 py-2 text-sm focus:outline-none focus:border-[#B91C1C]/50 focus:ring-4 focus:ring-[#FEE2E2]"
+                      />
+                    </label>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setRejecting(false)} className="h-11 px-4 rounded-xl border border-line text-sm font-bold text-navy-900 hover:bg-surface">
+                        {isAr ? 'رجوع' : 'Back'}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={!rejectReason.trim() || actionLoading}
+                        className="h-11 px-5 rounded-xl bg-[#B91C1C] hover:bg-[#991B1B] text-white text-sm font-bold disabled:opacity-50"
+                      >
+                        {actionLoading ? '…' : isAr ? 'رفض الطلب' : 'Reject application'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <p className="flex-1 text-xs text-ink-muted flex items-center gap-2">
+                    {missingRequired > 0 ? (
+                      <>
+                        <AlertTriangle className="h-4 w-4 text-[#B91C1C]" />
+                        <span className="text-[#B91C1C] font-bold">
+                          {isAr ? `${missingRequired} وثيقة مطلوبة مفقودة` : `${missingRequired} required document${missingRequired > 1 ? 's' : ''} missing`}
+                        </span>
+                      </>
+                    ) : requiredSeen < requiredDocs.length ? (
+                      <>
+                        <ShieldCheck className="h-4 w-4 text-[#8A5A00]" />
+                        {isAr ? 'لم تفتح كل الوثائق بعد.' : "You haven't opened every document yet."}
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 text-[#16A34A]" />
+                        <span className="text-[#15803D] font-bold">{isAr ? 'تمت مراجعة كل الوثائق' : 'All documents reviewed'}</span>
+                      </>
+                    )}
+                  </p>
                   <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setRejectReason(reason)}
-                    className="text-start px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] transition-colors"
+                    onClick={() => setRejecting(true)}
+                    className="h-11 px-5 rounded-xl border border-[#FECACA] text-[#B91C1C] hover:bg-[#FEE2E2] text-sm font-bold inline-flex items-center justify-center gap-2"
                   >
-                    {reason}
+                    <XCircle className="h-4 w-4" /> {isAr ? 'رفض' : 'Reject'}
                   </button>
-                ))}
-              </div>
-            </div>
-
-            <form onSubmit={handleReject} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-navy-900">
-                  {isAr ? 'سبب الرفض (إلزامي)' : 'Rejection Reason (Required)'}
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder={
-                    isAr
-                      ? 'مثال: صورة رخصة القيادة غير واضحة وتاريخ الانتهاء غير مقروء...'
-                      : 'E.g., Driver license document photo is blurry and expiry date cannot be verified...'
-                  }
-                  className="w-full rounded-xl border border-line p-3 text-xs focus:outline-hidden focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setRejectingUser(null)}
-                  className="px-4 py-2 rounded-xl border border-line text-xs font-semibold hover:bg-slate-50"
-                >
-                  {isAr ? 'إلغاء' : 'Cancel'}
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading || !rejectReason.trim()}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold disabled:opacity-50"
-                >
-                  {actionLoading
-                    ? isAr ? 'جاري الرفض...' : 'Rejecting...'
-                    : isAr ? 'تأكيد الرفض' : 'Confirm Rejection'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Photo Preview Modal */}
-      {previewPhoto && (
-        <div
-          className="fixed inset-0 z-70 bg-navy-900/80 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setPreviewPhoto(null)}
-        >
-          <div className="relative max-w-3xl max-h-[90vh] rounded-2xl overflow-hidden bg-black shadow-2xl">
-            <button
-              onClick={() => setPreviewPhoto(null)}
-              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <img
-              src={previewPhoto}
-              alt="Preview"
-              className="max-w-full max-h-[85vh] object-contain"
-            />
+                  <button
+                    onClick={handleApprove}
+                    disabled={actionLoading}
+                    className="h-11 px-6 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> {actionLoading ? '…' : isAr ? 'اعتماد الحساب' : 'Approve account'}
+                  </button>
+                </div>
+              )}
+            </footer>
           </div>
         </div>
       )}
     </div>
   );
 }
-

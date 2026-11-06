@@ -123,24 +123,24 @@ export default function AdminLiveMap() {
   }, []);
 
   return (
-    <div className="bg-card rounded-2xl border border-line p-5 shadow-xs space-y-4">
+    <div className="bg-card rounded-2xl border border-line p-5 space-y-4 h-full flex flex-col">
       {/* Map Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-navy-900 tracking-tight flex items-center gap-2">
-              <Truck className="w-5 h-5 text-emerald-600" />
-              <span>{isAr ? 'خريطة التتبع المباشر للأسطول' : 'Live Freight Fleet Map'}</span>
+            <h2 className="text-[15px] font-bold text-navy-900 flex items-center gap-2">
+              <Truck className="w-5 h-5 text-navy-700" />
+              <span>{isAr ? 'خريطة التتبع المباشر للأسطول' : 'Fleet map'}</span>
             </h2>
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">
-              <Radio className="w-3 h-3 text-rose-600" />
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#DCFCE7] text-[#15803D] border border-[#BBF7D0]">
+              <Radio className="w-3 h-3" />
               <span>{isAr ? 'تتبع حي' : 'Live Tracking'}</span>
             </span>
           </div>
           <p className="text-xs text-ink-muted mt-0.5">
             {isAr
               ? 'مواقع الشحنات الجارية وقيد التحميل، مع محاكاة الحركة المباشرة للشاحنات أثناء التوصيل'
-              : 'Active & en-route freight movements across the Kingdom (simulated truck progression)'}
+              : 'Open, loading and en-route shipments across Jordan'}
           </p>
         </div>
 
@@ -162,7 +162,7 @@ export default function AdminLiveMap() {
       </div>
 
       {/* Map Viewport */}
-      <div className="relative h-96 w-full rounded-2xl overflow-hidden border border-line shadow-inner z-0">
+      <div className="relative flex-1 min-h-[420px] w-full rounded-xl overflow-hidden border border-line shadow-inner z-0">
         <MapContainer
           center={[31.6, 35.8]}
           zoom={7.4}
@@ -211,7 +211,7 @@ export default function AdminLiveMap() {
                       )}
                       <Link
                         to={`/admin/shipments/${s.ticket_id}`}
-                        className="text-amber-600 font-bold hover:underline inline-block pt-1"
+                        className="text-navy-900 font-bold underline decoration-amber-500 decoration-2 inline-block pt-1"
                       >
                         {isAr ? 'فتح تفاصيل الشحنة ←' : 'View shipment details →'}
                       </Link>

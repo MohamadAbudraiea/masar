@@ -1,768 +1,580 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Truck,
-  ShieldCheck,
-  CheckCircle,
   ArrowRight,
-  ArrowLeft,
-  Building2,
-  Navigation,
-  Lock,
   Globe,
-  Clock,
-  Star,
-  Package,
-  Layers,
+  Factory,
   MapPin,
-  ChevronRight,
-  Sparkles,
+  ShieldCheck,
+  Lock,
+  Banknote,
+  CreditCard,
+  Star,
+  Phone,
+  Snowflake,
+  PackageCheck,
+  Truck,
+  Menu,
+  X,
+  Route,
+  Wallet,
+  Eye,
 } from 'lucide-react';
 import { setLanguage } from '../../i18n/index.js';
-import PhoneFrame from '../../components/PhoneFrame.jsx';
+import Logo, { LogoTruck } from '../../components/Logo.jsx';
 import StatusChip from '../../components/StatusChip.jsx';
+import Timeline from '../../components/Timeline.jsx';
 import { statsData, testimonials, truckCoverage } from './landingContent.js';
+
+const STATIONS = [
+  { en: 'Requested', ar: 'طُلبت', time: '08:12' },
+  { en: 'Paid', ar: 'دُفعت', time: '08:15' },
+  { en: 'Accepted', ar: 'قُبلت', time: '08:41' },
+  { en: 'Loaded', ar: 'حُمّلت', time: '10:05' },
+  { en: 'Delivered', ar: 'سُلّمت', time: '13:20' },
+  { en: 'Confirmed', ar: 'أُكّدت', time: '13:34' },
+];
+// where each station sits along the hero route (0..1 of path length)
+const STOP_AT = [0.02, 0.2, 0.38, 0.56, 0.78, 0.98];
+
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    if (!mq) return undefined;
+    setReduced(mq.matches);
+    const on = (e) => setReduced(e.matches);
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+  return reduced;
+}
+
+/** The one memorable moment (06 §1.1): a truck drives the dotted route once; six stations light up in turn. */
+function HeroRoute({ isAr }) {
+  const pathRef = useRef(null);
+  const reduced = usePrefersReducedMotion();
+  const [progress, setProgress] = useState(0); // 0..1
+  const [pts, setPts] = useState([]);
+
+  useLayoutEffect(() => {
+    const p = pathRef.current;
+    if (!p) return;
+    const L = p.getTotalLength();
+    setPts(STOP_AT.map((f) => p.getPointAtLength(f * L)));
+  }, []);
+
+  useEffect(() => {
+    if (reduced) {
+      setProgress(1);
+      return undefined;
+    }
+    let raf;
+    let start;
+    const DURATION = 5200;
+    const tick = (ts) => {
+      if (!start) start = ts + 500;
+      const t = Math.min(1, Math.max(0, (ts - start) / DURATION));
+      // ease-in-out
+      setProgress(t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [reduced]);
+
+  let truck = { x: 0, y: 0, a: 0 };
+  const p = pathRef.current;
+  if (p) {
+    const L = p.getTotalLength();
+    const at = Math.min(0.985, Math.max(0.015, progress)) * L;
+    const a = p.getPointAtLength(at);
+    const b = p.getPointAtLength(Math.min(L, at + 1));
+    truck = { x: a.x, y: a.y, a: (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI };
+  }
+  const reachedIdx = STOP_AT.reduce((acc, f, i) => (progress >= f - 0.005 ? i : acc), 0);
+
+  return (
+    <div className="relative" dir="ltr">
+      <svg viewBox="0 0 560 360" className="w-full h-auto" role="img" aria-label={isAr ? 'شاحنة تسير على مسار منقّط من المصنع إلى المستلم' : 'A truck driving a dotted route from the factory to the receiver'}>
+        {/* faint grid of dots = the map */}
+        <defs>
+          <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1.2" fill="#143B5E" />
+          </pattern>
+        </defs>
+        <rect width="560" height="360" fill="url(#dots)" opacity="0.8" />
+
+        {/* route: upcoming (slate) underneath, travelled (amber) on top via mask-ish dash offset */}
+        <path
+          ref={pathRef}
+          id="hero-route"
+          d="M52 290 C 120 290, 130 200, 200 196 S 300 250, 350 190 S 420 70, 508 80"
+          fill="none"
+          stroke="#2A4E73"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray="0.1 15"
+        />
+        <path
+          d="M52 290 C 120 290, 130 200, 200 196 S 300 250, 350 190 S 420 70, 508 80"
+          fill="none"
+          stroke="#F5A82A"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray="0.1 15"
+          mask="url(#travelled)"
+        />
+        <mask id="travelled">
+          <path
+            d="M52 290 C 120 290, 130 200, 200 196 S 300 250, 350 190 S 420 70, 508 80"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="14"
+            pathLength="1"
+            strokeDasharray={`${progress} 1`}
+          />
+        </mask>
+
+        {/* factory + destination pins */}
+        <g transform="translate(30 300)">
+          <rect x="0" y="0" width="44" height="44" rx="12" fill="#F5A82A" />
+          <path d="M10 33V20l7 4v-4l7 4v-4l7 4v9z" fill="#071E33" />
+        </g>
+        <g transform="translate(486 30)">
+          <circle cx="22" cy="22" r="22" fill="#FFFFFF" />
+          <path d="M22 10c-5 0-9 4-9 9 0 7 9 15 9 15s9-8 9-15c0-5-4-9-9-9zm0 12a3 3 0 110-6 3 3 0 010 6z" fill="#071E33" />
+        </g>
+
+        {/* stations */}
+        {pts.map((pt, i) => {
+          const done = i < reachedIdx || (i === reachedIdx && progress >= STOP_AT[i]);
+          const current = i === reachedIdx && progress < 1;
+          if (i === 0 || i === pts.length - 1) return null;
+          return (
+            <g key={i}>
+              {current && !reduced && (
+                <circle cx={pt.x} cy={pt.y} r="15" fill="#F5A82A" opacity="0.25">
+                  <animate attributeName="r" values="10;18;10" dur="1.6s" repeatCount="indefinite" />
+                </circle>
+              )}
+              <circle cx={pt.x} cy={pt.y} r="9" fill={done ? '#F5A82A' : '#0C2B47'} stroke={done ? '#F5A82A' : '#4A6A8A'} strokeWidth="2.5" />
+              {done && <path d={`M${pt.x - 4} ${pt.y}l3 3 5-6`} stroke="#071E33" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />}
+            </g>
+          );
+        })}
+
+        {/* truck */}
+        <g transform={`translate(${truck.x} ${truck.y}) rotate(${Math.max(-30, Math.min(30, truck.a))}) scale(1.5) translate(-13 -16)`}>
+          <rect x="-4" y="-4" width="34" height="24" rx="8" fill="#071E33" opacity="0.6" />
+          <LogoTruck x={0} y={0} scale={1.1} body="#FFFFFF" cab="#FFFFFF" wheel="#071E33" />
+        </g>
+      </svg>
+
+      {/* station labels */}
+      <ol className="mt-4 grid grid-cols-3 sm:grid-cols-6 gap-2" dir={isAr ? 'rtl' : 'ltr'}>
+        {STATIONS.map((s, i) => {
+          const lit = progress >= STOP_AT[i] - 0.005;
+          return (
+            <li
+              key={s.en}
+              className={`rounded-xl px-2.5 py-2 border transition-colors duration-300 ${
+                lit ? 'bg-navy-800 border-amber-500/60' : 'bg-transparent border-navy-700'
+              }`}
+            >
+              <span className={`block text-xs font-bold ${lit ? 'text-white' : 'text-navy-100/50'}`}>{isAr ? s.ar : s.en}</span>
+              <span className={`block text-[11px] tabular-nums ${lit ? 'text-amber-500' : 'text-navy-100/40'}`} dir="ltr">
+                {lit ? s.time : '--:--'}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function SectionTitle({ kicker, title, sub, light = false, center = false }) {
+  return (
+    <div className={center ? 'text-center max-w-2xl mx-auto' : 'max-w-2xl'}>
+      {kicker && (
+        <p className={`text-sm font-bold ${light ? 'text-amber-500' : 'text-[#8A5A00]'}`}>{kicker}</p>
+      )}
+      <h2 className={`mt-2 text-3xl sm:text-[40px] leading-[1.1] font-extrabold tracking-tight ${light ? 'text-white' : 'text-navy-900'}`}>{title}</h2>
+      {sub && <p className={`mt-4 text-base sm:text-lg leading-relaxed ${light ? 'text-navy-100' : 'text-ink-muted'}`}>{sub}</p>}
+    </div>
+  );
+}
 
 export default function Landing() {
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
-  const navigate = useNavigate();
+  const [menu, setMenu] = useState(false);
+  const T = (en, ar) => (isAr ? ar : en);
 
-  // Hero Station Route Animation (6 Stations)
-  const stations = [
-    { key: 'requested', en: '1. Requested', ar: '1. طلب الشحنة', time: '09:00 AM' },
-    { key: 'pending', en: '2. SafePay Deposited', ar: '2. إيداع الضمان', time: '09:12 AM' },
-    { key: 'accepted', en: '3. Driver Accepted', ar: '3. قبول السائق', time: '09:25 AM' },
-    { key: 'waiting_load', en: '4. Goods Loaded', ar: '4. تحميل البضاعة', time: '10:45 AM' },
-    { key: 'in_delivery', en: '5. Delivered', ar: '5. تسليم المستلم', time: '01:30 PM' },
-    { key: 'audited', en: '6. Payout Released', ar: '6. صرف المستحقات', time: '01:50 PM' },
+  const nav = [
+    { href: '#how', label: T('How it works', 'كيف يعمل') },
+    { href: '#manufacturers', label: T('Manufacturers', 'للمصانع') },
+    { href: '#drivers', label: T('Drivers', 'للسائقين') },
+    { href: '#escrow', label: T('Escrow', 'حساب الضمان') },
   ];
 
-  const [activeStationIdx, setActiveStationIdx] = useState(0);
+  const how = [
+    { icon: Factory, en: 'You post the shipment', ar: 'تطلب الشحنة' },
+    { icon: Lock, en: 'Your payment is held safely', ar: 'يُحفظ دفعك بأمان' },
+    { icon: Truck, en: 'A matching driver accepts', ar: 'يقبل الشحنة سائق مناسب' },
+    { icon: PackageCheck, en: 'The goods are loaded', ar: 'تُحمَّل البضاعة' },
+    { icon: MapPin, en: 'The driver delivers', ar: 'يسلّم السائق الشحنة' },
+    { icon: Banknote, en: 'You confirm, and the driver is paid', ar: 'تؤكد التسليم، ويُصرف مستحق السائق' },
+  ];
 
-  useEffect(() => {
-    // Check user preference for reduced motion
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) {
-      setActiveStationIdx(5); // Show completed state
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setActiveStationIdx((prev) => (prev < 5 ? prev + 1 : 0));
-    }, 2400);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const toggleLang = () => {
-    setLanguage(isAr ? 'en' : 'ar');
+  const now = Date.now();
+  const sampleHistory = {
+    requested: new Date(now - 6 * 36e5).toISOString(),
+    pending: new Date(now - 5.9 * 36e5).toISOString(),
+    waiting_load: new Date(now - 5.2 * 36e5).toISOString(),
+    in_delivery: new Date(now - 3.8 * 36e5).toISOString(),
   };
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col font-sans selection:bg-amber-500 selection:text-navy-900">
-      {/* 1. Header */}
-      <header className="sticky top-0 z-50 bg-navy-900/95 backdrop-blur-md border-b border-navy-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-navy-900 flex items-center justify-center font-black shadow-sm group-hover:scale-105 transition-transform">
-              <Truck className="w-6 h-6 stroke-[2.2]" />
-            </div>
-            <div>
-              <span className="text-xl font-black tracking-tight block leading-none">
-                {isAr ? 'مـسـار' : 'MASAR'}
-              </span>
-              <span className="text-[10px] text-amber-400 font-bold tracking-widest uppercase">
-                {isAr ? 'شحن موثوق بضمان مالي' : 'SafePay Freight Escrow'}
-              </span>
-            </div>
+    <div className="min-h-screen bg-surface text-ink">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-navy-900/95 backdrop-blur border-b border-navy-800">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-[72px] flex items-center justify-between gap-6">
+          <Link to="/" aria-label="Masar">
+            <Logo tone="light" size={22} lang={isAr ? 'ar' : 'en'} />
           </Link>
-
-          {/* Nav Actions */}
-          <div className="flex items-center gap-3">
-            {/* Language Switch */}
-            <button
-              onClick={toggleLang}
-              className="px-3 py-1.5 rounded-xl bg-navy-800 hover:bg-navy-700 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5 border border-navy-700"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>{isAr ? 'English' : 'عربي'}</span>
+          <nav className="hidden lg:flex items-center gap-1">
+            {nav.map((n) => (
+              <a key={n.href} href={n.href} className="h-9 px-3 rounded-lg inline-flex items-center text-sm font-semibold text-navy-100 hover:text-white hover:bg-navy-800">
+                {n.label}
+              </a>
+            ))}
+          </nav>
+          <div className="hidden sm:flex items-center gap-2">
+            <button onClick={() => setLanguage(isAr ? 'en' : 'ar')} className="h-9 px-3 rounded-lg inline-flex items-center gap-1.5 text-sm font-bold text-navy-100 hover:text-white hover:bg-navy-800">
+              <Globe className="h-4 w-4" /> {isAr ? 'English' : 'العربية'}
             </button>
-
-            {/* Login */}
-            <Link
-              to="/login"
-              className="text-xs font-bold text-slate-200 hover:text-white px-3 py-1.5 rounded-xl hover:bg-navy-800 transition"
-            >
-              {isAr ? 'تسجيل الدخول' : 'Log In'}
+            <Link to="/login" className="h-9 px-4 rounded-lg inline-flex items-center text-sm font-bold text-white border border-navy-700 hover:bg-navy-800">
+              {T('Log in', 'دخول')}
             </Link>
-
-            {/* Sign Up */}
-            <Link
-              to="/signup"
-              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-navy-900 text-xs font-black transition shadow-sm"
-            >
-              {isAr ? 'إنشاء حساب جديد' : 'Sign Up'}
+            <Link to="/signup" className="h-9 px-4 rounded-lg inline-flex items-center text-sm font-bold bg-amber-500 hover:bg-amber-600 text-navy-900">
+              {T('Sign up', 'إنشاء حساب')}
             </Link>
           </div>
+          <button className="sm:hidden h-10 w-10 rounded-lg text-white flex items-center justify-center" onClick={() => setMenu((m) => !m)} aria-label={T('Menu', 'القائمة')} aria-expanded={menu}>
+            {menu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
+        {menu && (
+          <div className="sm:hidden border-t border-navy-800 px-5 py-4 space-y-2">
+            {nav.map((n) => (
+              <a key={n.href} href={n.href} onClick={() => setMenu(false)} className="block py-2 text-base font-semibold text-white">{n.label}</a>
+            ))}
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <Link to="/login" className="h-11 rounded-xl border border-navy-700 text-white font-bold flex items-center justify-center">{T('Log in', 'دخول')}</Link>
+              <Link to="/signup" className="h-11 rounded-xl bg-amber-500 text-navy-900 font-bold flex items-center justify-center">{T('Sign up', 'إنشاء حساب')}</Link>
+            </div>
+            <button onClick={() => setLanguage(isAr ? 'en' : 'ar')} className="w-full h-11 rounded-xl text-navy-100 font-bold">{isAr ? 'English' : 'العربية'}</button>
+          </div>
+        )}
       </header>
 
-      {/* 2. Hero Section (Navy Band with Animated Route) */}
-      <section className="bg-navy-900 text-white pt-16 pb-24 border-b border-navy-800 relative overflow-hidden">
-        {/* Subtle grid backdrop */}
-        <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Headline & CTAs */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-start">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{isAr ? 'المنصة اللوجستية الأولى في الأردن بحساب ضمان SafePay' : 'Jordan’s #1 Escrow Freight Platform'}</span>
-              </div>
-
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15]">
-                {isAr
-                  ? 'كل شحنة، من بوابة المصنع حتى المستلم، تحت المتابعة.'
-                  : 'Every shipment, tracked from the factory gate to the receiver.'}
-              </h1>
-
-              <p className="text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed">
-                {isAr
-                  ? 'مسار يربط المصانع بسائقين موثّقين، ويحتفظ بالمبلغ في حساب ضمان SafePay حتى تؤكد فحص واستلام البضاعة.'
-                  : 'Masar connects manufacturers with verified freight drivers and holds the payment in escrow until you inspect and confirm the delivery.'}
-              </p>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 pt-2">
-                <Link
-                  to="/signup/manufacturer"
-                  className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-navy-900 font-black text-sm transition shadow-lg flex items-center justify-center gap-2"
-                >
-                  <Building2 className="w-4 h-4" />
-                  <span>{isAr ? 'اشحن مع مسار' : 'Ship with Masar'}</span>
-                  <ArrowRight className="w-4 h-4 rtl:rotate-180" />
-                </Link>
-
-                <Link
-                  to="/signup/driver"
-                  className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-navy-800 hover:bg-navy-700 text-white font-bold text-sm border border-slate-700 transition flex items-center justify-center gap-2"
-                >
-                  <Truck className="w-4 h-4 text-emerald-400" />
-                  <span>{isAr ? 'اعمل سائقاً مع مسار' : 'Drive with Masar'}</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Right: Signature Animated Dotted Route */}
-            <div className="lg:col-span-5 bg-navy-950/80 rounded-3xl border border-navy-800 p-6 shadow-2xl relative">
-              <div className="flex items-center justify-between mb-4 border-b border-navy-800/80 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs font-bold text-slate-300 font-mono">MSR-000018</span>
-                </div>
-                <span className="text-[11px] font-mono text-amber-400 font-bold">
-                  {isAr ? 'محاكاة رحلة الشحنة المباشرة' : 'Live Shipment Lifecycle'}
-                </span>
-              </div>
-
-              {/* Interactive Station Progression */}
-              <div className="space-y-4">
-                {stations.map((st, i) => {
-                  const isDone = i <= activeStationIdx;
-                  const isCurrent = i === activeStationIdx;
-
-                  return (
-                    <div
-                      key={st.key}
-                      className={`flex items-center justify-between p-3 rounded-2xl transition-all duration-300 ${
-                        isCurrent
-                          ? 'bg-amber-500/15 border border-amber-500/50 shadow-md translate-x-1'
-                          : isDone
-                          ? 'bg-navy-900/60 border border-navy-800 text-slate-300'
-                          : 'opacity-40 border border-transparent text-slate-500'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black transition-all ${
-                            isCurrent
-                              ? 'bg-amber-500 text-navy-900 scale-110 shadow-sm'
-                              : isDone
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-navy-800 text-slate-400'
-                          }`}
-                        >
-                          {isDone && !isCurrent ? '✓' : i + 1}
-                        </div>
-                        <div>
-                          <span
-                            className={`text-xs font-bold block ${
-                              isCurrent ? 'text-amber-400' : isDone ? 'text-white' : 'text-slate-400'
-                            }`}
-                          >
-                            {isAr ? st.ar : st.en}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {isCurrent && (
-                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 px-2 py-0.5 rounded bg-amber-500/20">
-                            {isAr ? 'الآن' : 'Active'}
-                          </span>
-                        )}
-                        <span className="text-[11px] font-mono text-slate-400">{st.time}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Floating Moving Truck Badge */}
-              <div className="mt-4 pt-4 border-t border-navy-800 flex items-center justify-between text-xs text-slate-400">
-                <div className="flex items-center gap-2 text-emerald-400 font-bold">
-                  <Truck className="w-4 h-4 animate-bounce" />
-                  <span>
-                    {isAr
-                      ? 'الشاحنة المعتمدة: 44-12345 (براد ثقيل)'
-                      : 'Truck: 44-12345 (Heavy Refrigerated)'}
-                  </span>
-                </div>
-                <span className="font-mono text-amber-400 font-bold">Amman → Aqaba</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Section 1: How It Works */}
-      <section className="py-20 bg-card border-b border-line">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-600 block">
-              {isAr ? 'دورة العمل المبسطة' : 'Simple, Transparent Process'}
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-navy-900 tracking-tight">
-              {isAr ? 'كيف يعمل مسار في 6 خطوات محكمة؟' : 'How Masar Works in 6 Clear Steps'}
-            </h2>
-            <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
-              {isAr
-                ? 'تطلب الشحنة · يُحفظ دفعك بأمان · يقبل الشحنة سائق مناسب · تُحمَّل البضاعة · يسلّم السائق الشحنة · تؤكد التسليم، ويُصرف مستحق السائق.'
-                : 'You post the shipment · Your payment is held safely · A matching driver accepts · The goods are loaded · The driver delivers · You confirm, and the driver is paid.'}
+      {/* Hero */}
+      <section className="bg-navy-900 text-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-14 pb-20 lg:pt-20 lg:pb-28 grid lg:grid-cols-[1fr_1.05fr] gap-12 items-center">
+          <div>
+            <h1 className="text-[40px] sm:text-[52px] leading-[1.05] font-extrabold tracking-[-0.02em]">
+              {T('Every shipment, tracked from the factory gate to the receiver.', 'كل شحنة، من بوابة المصنع حتى المستلم، تحت المتابعة.')}
+            </h1>
+            <p className="mt-6 text-lg leading-relaxed text-navy-100 max-w-xl">
+              {T(
+                'Masar connects manufacturers with verified drivers and holds the payment in escrow until you confirm the delivery.',
+                'مسار يربط المصانع بسائقين موثّقين، ويحتفظ بالمبلغ في حساب ضمان حتى تؤكد التسليم.'
+              )}
             </p>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <Link to="/signup/manufacturer" className="h-14 px-7 rounded-2xl bg-amber-500 hover:bg-amber-600 text-navy-900 text-base font-extrabold inline-flex items-center gap-2 transition">
+                {T('Ship with Masar', 'اشحن مع مسار')}
+                <ArrowRight className="h-5 w-5 rtl:-scale-x-100" />
+              </Link>
+              <Link to="/signup/driver" className="h-14 px-7 rounded-2xl border-2 border-navy-700 hover:border-amber-500 text-white text-base font-bold inline-flex items-center gap-2 transition">
+                <Truck className="h-5 w-5" />
+                {T('Drive with Masar', 'اعمل سائقًا مع مسار')}
+              </Link>
+            </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                num: '01',
-                titleEn: '1. Post Cargo & Route',
-                titleAr: '1. إنشاء الشحنة وتحديد المسار',
-                descEn: 'Enter cargo specifications and route. Automatic engine suggests the ideal truck.',
-                descAr: 'أدخل مواصفات البضاعة ونقاط التحميل والتسليم. يقترح النظام الشاحنة المناسبة آلياً.',
-              },
-              {
-                num: '02',
-                titleEn: '2. SafePay Deposit Held',
-                titleAr: '2. إيداع الضمان المالي',
-                descEn: 'Deposit payment securely in escrow. Money is locked safely and not released yet.',
-                descAr: 'يودع المصنع المبلغ في حساب الضمان الآمن، ويبقى محجوزاً ولا يُصرف لأي طرف.',
-              },
-              {
-                num: '03',
-                titleEn: '3. Matching Driver Accepts',
-                titleAr: '3. قبول سائق مؤهل',
-                descEn: 'Only verified drivers with matching truck licenses and body types can accept.',
-                descAr: 'تظهر الشحنة للسائقين المطابقين فقط بفئات رخصهم وتجهيزات شاحناتهم.',
-              },
-              {
-                num: '04',
-                titleEn: '4. Loading at Factory',
-                titleAr: '4. التحميل في المصنع',
-                descEn: 'Driver arrives at scheduled time. Factory confirms cargo loaded and dispatches.',
-                descAr: 'يصل السائق في الموعد المحدد، ويوثق المصنع اكتمال التحميل وانطلاق الرحلة.',
-              },
-              {
-                num: '05',
-                titleEn: '5. Safe Delivery & Handover',
-                titleAr: '5. الوصول والتسليم',
-                descEn: 'Driver delivers cargo to the receiver. Driver is immediately free for their next trip.',
-                descAr: 'يسلّم السائق البضاعة للمستلم، ويتحرر السائق فوراً ليتمكن من قبول شحنة جديدة.',
-              },
-              {
-                num: '06',
-                titleEn: '6. Receipt Confirmation & Release',
-                titleAr: '6. تأكيد الاستلام وصرف الأرباح',
-                descEn: 'Manufacturer inspects and confirms receipt. Escrow instantly releases driver earnings.',
-                descAr: 'يؤكد المصنع سلامة الاستلام، فيقوم حساب الضمان فوراً بتحويل الأرباح لحساب السائق.',
-              },
-            ].map((step) => (
-              <div
-                key={step.num}
-                className="bg-surface/50 border border-line rounded-3xl p-6 hover:border-navy-900 transition hover:shadow-xs space-y-3"
-              >
-                <span className="text-2xl font-black font-mono text-amber-500 block">
-                  {step.num}
-                </span>
-                <h3 className="text-base font-bold text-navy-900">
-                  {isAr ? step.titleAr : step.titleEn}
-                </h3>
-                <p className="text-xs text-ink-muted leading-relaxed">
-                  {isAr ? step.descAr : step.descEn}
-                </p>
-              </div>
-            ))}
-          </div>
+          <HeroRoute isAr={isAr} />
         </div>
       </section>
 
-      {/* 4. Section 2: For Manufacturers (Live Component Mock) */}
-      <section className="py-20 bg-surface">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Narrative */}
-            <div className="lg:col-span-5 space-y-6">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-600 block">
-                {isAr ? 'للشركات والمصانع' : 'For Manufacturers & Shippers'}
-              </span>
-              <h2 className="text-2xl sm:text-4xl font-black text-navy-900 tracking-tight">
-                {isAr
-                  ? 'انشر شحنتك بدقائق، وادفع فقط بعد معاينة التسليم.'
-                  : 'Post a shipment in minutes. Pay only after you confirm.'}
-              </h2>
-              <div className="space-y-3 text-xs sm:text-sm text-ink-muted leading-relaxed">
-                <p>
-                  {isAr
-                    ? 'اختر الشاحنة المناسبة من قائمة موجهة ذكية تقترح الأبعاد والنوع حسب وزن البضاعة.'
-                    : 'Choose the truck from a guided list calibrated to your cargo weight and cooling requirements.'}
-                </p>
-                <p>
-                  {isAr
-                    ? 'تابع كل خطوة مباشرة على الخط الزمني، وتواصل مع السائق مباشرة دون وسطاء.'
-                    : 'Follow every milestone live on an audited timeline, with direct driver phone access.'}
-                </p>
-              </div>
+      {/* How it works */}
+      <section id="how" className="scroll-mt-20 py-20 lg:py-28">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <SectionTitle
+            center
+            kicker={T('How it works', 'كيف يعمل')}
+            title={T('Six stations. One shipment.', 'ست محطات. شحنة واحدة.')}
+            sub={T('The same timeline you will follow on every shipment.', 'نفس الخط الزمني الذي ستتابعه في كل شحنة.')}
+          />
+          <ol className="mt-14 relative grid grid-cols-1 md:grid-cols-6 gap-8 md:gap-4">
+            <span aria-hidden="true" className="hidden md:block absolute top-7 start-[8%] end-[8%] border-t-[4px] border-dotted border-amber-500" />
+            {how.map((h) => (
+              <li key={h.en} className="relative flex md:flex-col items-center md:text-center gap-4 md:gap-3">
+                <span className="relative z-[1] h-14 w-14 shrink-0 rounded-full bg-navy-900 text-amber-500 ring-8 ring-surface flex items-center justify-center">
+                  <h.icon className="h-6 w-6" />
+                </span>
+                <span className="text-[15px] font-bold text-navy-900 leading-snug max-w-[180px]">{isAr ? h.ar : h.en}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
 
-              <div className="pt-2">
-                <Link
-                  to="/signup/manufacturer"
-                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-navy-900 text-white font-bold text-xs hover:bg-navy-800 transition shadow-sm"
-                >
-                  <Building2 className="w-4 h-4 text-amber-400" />
-                  <span>{isAr ? 'سجّل مصنعك الآن' : 'Register Your Company'}</span>
-                </Link>
-              </div>
-            </div>
+      {/* For manufacturers */}
+      <section id="manufacturers" className="scroll-mt-20 bg-card border-y border-line py-20 lg:py-28">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-14 items-center">
+          <div>
+            <SectionTitle
+              kicker={T('For manufacturers', 'للمصانع')}
+              title={T('Post a shipment in minutes. Pay only after you confirm.', 'اطلب شحنة خلال دقائق. ولا يُصرف المبلغ إلا بعد تأكيدك.')}
+            />
+            <ul className="mt-8 space-y-5">
+              {[
+                { icon: Route, en: 'Pick your saved factory and destination in two taps.', ar: 'اختر مصنعك ووجهتك المحفوظة بلمستين.' },
+                { icon: Truck, en: 'Choose the truck from a guided list — we suggest the right one for your cargo.', ar: 'اختر الشاحنة من قائمة موجّهة، ونقترح عليك المناسبة لبضاعتك.' },
+                { icon: Eye, en: 'Follow every step live on one timeline, with the driver a call away.', ar: 'تابع كل خطوة مباشرة على خط زمني واحد، والسائق على بعد اتصال.' },
+              ].map((x) => (
+                <li key={x.en} className="flex gap-4">
+                  <span className="h-11 w-11 shrink-0 rounded-xl bg-amber-100 text-[#8A5A00] flex items-center justify-center">
+                    <x.icon className="h-5 w-5" />
+                  </span>
+                  <span className="pt-2 text-base text-ink leading-relaxed">{isAr ? x.ar : x.en}</span>
+                </li>
+              ))}
+            </ul>
+            <Link to="/signup/manufacturer" className="mt-10 h-12 px-6 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-bold inline-flex items-center gap-2">
+              {T('Create a company account', 'أنشئ حساب شركة')} <ArrowRight className="h-4 w-4 rtl:-scale-x-100" />
+            </Link>
+          </div>
 
-            {/* Right: Mock Shipment Detail Component */}
-            <div className="lg:col-span-7 bg-card border border-line rounded-3xl p-6 shadow-md space-y-5">
-              <div className="flex items-center justify-between border-b border-line pb-4">
+          {/* real components with sample data */}
+          <div className="rounded-3xl border border-line bg-surface p-3 sm:p-5" aria-hidden="true">
+            <div className="rounded-2xl border border-line bg-card p-5">
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-base font-black text-navy-900">MSR-000018</span>
-                    <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
-                      ✓ {isAr ? 'على الطريق (In Delivery)' : 'In Delivery'}
-                    </span>
+                    <span className="text-lg font-extrabold text-navy-900">MSR-000124</span>
+                    <StatusChip status="in_delivery" />
                   </div>
-                  <span className="text-xs text-ink-muted">
-                    {isAr ? 'شركة النور للأغذية · ألبان مبردة' : 'Al-Nour Foods Co. · Chilled Dairy'}
-                  </span>
+                  <p className="text-sm text-ink-muted mt-1">{T('Zarqa → Aqaba · Chilled dairy, 6 t', 'الزرقاء ← العقبة · ألبان مبرّدة، 6 طن')}</p>
                 </div>
                 <div className="text-end">
-                  <span className="text-xs text-ink-muted block">{isAr ? 'القيمة الإجمالية' : 'Total Price'}</span>
-                  <span className="text-lg font-black text-navy-900 font-mono">750.000 JD</span>
+                  <p className="text-xs text-ink-muted">{T('Price', 'السعر')}</p>
+                  <p className="text-xl font-extrabold text-navy-900 tabular-nums" dir="ltr">752.000 JD</p>
                 </div>
               </div>
-
-              {/* Route */}
-              <div className="grid grid-cols-2 gap-4 text-xs bg-surface p-4 rounded-2xl border border-line">
-                <div>
-                  <span className="text-[10px] text-ink-muted font-bold block">{isAr ? 'موقع التحميل' : 'Pickup'}</span>
-                  <span className="font-bold text-navy-900">Sahab Industrial City</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-ink-muted font-bold block">{isAr ? 'وجهة التسليم' : 'Destination'}</span>
-                  <span className="font-bold text-navy-900">Aqaba Port Area</span>
-                </div>
+              <div className="mt-6 overflow-x-auto">
+                <Timeline status="in_delivery" statusHistory={sampleHistory} variant="desktop" />
               </div>
-
-              {/* Assigned Driver Card */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50/50 text-xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-bold">
-                    O
-                  </div>
-                  <div>
-                    <span className="font-bold text-navy-900 block">Mr. Omar Saleh</span>
-                    <span className="text-[11px] text-emerald-800">44-12345 · Heavy Refrigerated (Chilled)</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-emerald-800 font-bold hover:bg-emerald-50 transition shadow-2xs"
-                >
-                  📞 {isAr ? 'اتصال' : 'Call'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Section 3: For Drivers (Phone Frame Mock) */}
-      <section className="py-20 bg-card border-b border-line">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left: Driver Phone Frame Mock */}
-            <div className="lg:col-span-6 flex justify-center">
-              <div className="w-full max-w-sm">
-                <PhoneFrame>
-                  <div className="bg-navy-900 text-white p-4 shrink-0 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] text-amber-400 font-bold uppercase">
-                        {isAr ? 'تطبيق السائق' : 'Driver App'}
-                      </span>
-                      <h4 className="text-sm font-black">{isAr ? 'السيد عمر صالح' : 'Mr. Omar Saleh'}</h4>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-                      ● {isAr ? 'متاح للشحن' : 'Online'}
-                    </span>
-                  </div>
-
-                  <div className="p-4 space-y-3 flex-1 overflow-y-auto">
-                    <div className="text-[11px] font-bold text-ink-muted">
-                      {isAr ? 'شحنة مطابقة لشاحنتك:' : 'Matching Available Cargo:'}
-                    </div>
-
-                    <div className="bg-card rounded-2xl border border-line p-4 space-y-3 shadow-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono font-bold text-navy-900 text-xs">MSR-000021</span>
-                        <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-bold text-[10px] border border-amber-200">
-                          {isAr ? 'متاحة للقبول' : 'Available'}
-                        </span>
-                      </div>
-
-                      <div className="p-2.5 rounded-xl bg-surface text-xs space-y-1">
-                        <div className="font-bold text-navy-900">Amman → Irbid (85 km)</div>
-                        <div className="text-[11px] text-ink-muted">14 tons · Refrigerated Chilled</div>
-                      </div>
-
-                      {/* Driver Net (Strict earnings visibility!) */}
-                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
-                        <span className="text-xs text-emerald-900 font-bold">
-                          {isAr ? 'مستحقاتك الصافية:' : 'Your Net Earnings:'}
-                        </span>
-                        <span className="text-base font-black text-emerald-700 font-mono">
-                          264.000 JD
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition"
-                      >
-                        {isAr ? 'قبول الشحنة فوراً' : 'Accept Shipment'}
-                      </button>
-                    </div>
-                  </div>
-                </PhoneFrame>
-              </div>
-            </div>
-
-            {/* Right Narrative */}
-            <div className="lg:col-span-6 space-y-6">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 block">
-                {isAr ? 'لسائقي الشحن الأردنيين' : 'For Verified Freight Drivers'}
-              </span>
-              <h2 className="text-2xl sm:text-4xl font-black text-navy-900 tracking-tight">
-                {isAr
-                  ? 'شحنات تطابق شاحنتك. تعرف أرباحك الصافية قبل القبول.'
-                  : 'Shipments that fit your truck. See your earnings before you accept.'}
-              </h2>
-              <div className="space-y-3 text-xs sm:text-sm text-ink-muted leading-relaxed">
-                <p>
-                  {isAr
-                    ? 'لا داعي للمساومة أو الانتظار في الساحات. يطابق مسار الشحنات مع فئة رخصتك ونوع شاحنتك آلياً.'
-                    : 'No haggling or idle waiting. Masar matches loads directly to your license class and body configuration.'}
-                </p>
-                <p>
-                  {isAr
-                    ? 'تطبيق فائق الوضوح صُمم خصيصاً لظروف الطريق: أرقام كبيرة، تواصل بلمسة واحدة، وضمان دفع فوري عبر حسابك البنكي أو كليك.'
-                    : 'A clean, high-contrast mobile app designed for long days on the road with guaranteed instant CliQ/IBAN payouts.'}
-                </p>
-              </div>
-
-              <div className="pt-2">
-                <Link
-                  to="/signup/driver"
-                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs transition shadow-sm"
-                >
-                  <Truck className="w-4 h-4 text-amber-400" />
-                  <span>{isAr ? 'انضم كأسطول سائقين' : 'Join as a Verified Driver'}</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. Section 4: SafePay Escrow Protection */}
-      <section className="py-20 bg-navy-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
-              <ShieldCheck className="w-4 h-4" />
-              <span>SafePay Freight Escrow</span>
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-black tracking-tight">
-              {isAr ? 'أموالك ومستحقاتك محمية في حساب ضمان مستقل' : 'Your Money is Protected with SafePay'}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              {isAr
-                ? 'نظام ضمان مالي يعزل مبالغ الشحن ويحمي الطرفين حتى اكتمال المعاينة والتسليم.'
-                : 'Neutral financial escrow that protects both shipper and driver until safe delivery is confirmed.'}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-8 rounded-3xl bg-navy-950 border border-navy-800 space-y-3 text-center sm:text-start">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center font-black mx-auto sm:mx-0">
-                1
-              </div>
-              <h3 className="text-base font-bold text-white">
-                {isAr ? '1. إيداع مؤمَّن مسبقاً' : '1. Advance Secured Deposit'}
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                {isAr
-                  ? 'يودع المصنع قيمة الشحنة قبل بدء الرحلة. يعلم السائق أن أتعابه متوفرة ومحجوزة بأمان.'
-                  : 'Shipper deposits freight payment before truck dispatch. Driver knows money is guaranteed.'}
-              </p>
-            </div>
-
-            <div className="p-8 rounded-3xl bg-navy-950 border border-navy-800 space-y-3 text-center sm:text-start">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-black mx-auto sm:mx-0">
-                2
-              </div>
-              <h3 className="text-base font-bold text-white">
-                {isAr ? '2. حفظ المبلغ في الحساب المستقل' : '2. Neutral Escrow Custody'}
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                {isAr
-                  ? 'يظل المبلغ محجوزاً في حساب الضمان طوال فترة النقل. لا يستطيع أي طرف سحبه أو التصرف به.'
-                  : 'Funds remain frozen in escrow throughout transit. Neither party can unilaterally touch the funds.'}
-              </p>
-            </div>
-
-            <div className="p-8 rounded-3xl bg-navy-950 border border-navy-800 space-y-3 text-center sm:text-start">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center font-black mx-auto sm:mx-0">
-                3
-              </div>
-              <h3 className="text-base font-bold text-white">
-                {isAr ? '3. صرف فوري بعد التأكيد' : '3. Instant Release Upon Confirmation'}
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                {isAr
-                  ? 'بمجرد فحص وتأكيد التسليم من المصنع، يقوم النظام تلقائياً بتحويل الأرباح لحساب السائق.'
-                  : 'Once receiver inspects and confirms receipt, escrow immediately settles earnings to the driver.'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. Section 5: Trucks We Cover */}
-      <section className="py-20 bg-surface">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-600 block">
-              {isAr ? 'أسطول الشاحنات' : 'Full Spectrum Vehicle Coverage'}
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-navy-900 tracking-tight">
-              {isAr ? 'شاحنات وتجهيزات تغطي كافة الاحتياجات الصناعية' : 'Trucks & Bodies Covered by Masar'}
-            </h2>
-            <p className="text-xs sm:text-sm text-ink-muted">
-              {isAr
-                ? 'من شاحنات التوزيع الخفيفة حتى التريلات والصهاريج المتخصصة في المواد الخطرة'
-                : 'From light distribution vans to heavy tractor-trailers and ADR-certified tankers.'}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {truckCoverage.map((tk) => (
-              <div
-                key={tk.id}
-                className="bg-card border border-line rounded-3xl p-6 hover:border-navy-900 transition hover:shadow-xs space-y-3 flex flex-col justify-between"
-              >
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md inline-block mb-2">
-                    {tk.badge}
-                  </span>
-                  <h3 className="text-base font-bold text-navy-900">
-                    {isAr ? tk.nameAr : tk.nameEn}
-                  </h3>
-                  <span className="text-xs font-mono text-emerald-700 font-bold block mt-1">
-                    {isAr ? tk.weightAr : tk.weightEn}
-                  </span>
-                  <p className="text-xs text-ink-muted mt-2 leading-relaxed">
-                    {isAr ? tk.bodiesAr : tk.bodiesEn}
+              <div className="mt-5 flex items-center gap-3 rounded-xl border border-line p-3">
+                <span className="h-10 w-10 rounded-full bg-navy-900 text-amber-500 text-sm font-extrabold flex items-center justify-center">OS</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-navy-900">{T('Mr. Omar Saleh', 'السيد عمر صالح')}</p>
+                  <p className="text-xs text-ink-muted flex items-center gap-1.5">
+                    <Snowflake className="h-3.5 w-3.5" /> {T('Refrigerated · 44-12345', 'مبرّدة · 44-12345')}
+                    <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500 ms-1" /> 5.0
                   </p>
                 </div>
+                <span className="h-9 px-3 rounded-lg border border-line text-sm font-bold text-navy-900 inline-flex items-center gap-1.5">
+                  <Phone className="h-4 w-4" /> {T('Call', 'اتصال')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-                <div className="pt-4 border-t border-line text-xs font-bold text-navy-900 flex items-center justify-between">
-                  <span>{isAr ? 'معتمد على مسار' : 'Fully Supported'}</span>
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+      {/* For drivers */}
+      <section id="drivers" className="scroll-mt-20 py-20 lg:py-28">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-14 items-center">
+          {/* phone mock with an available-shipment card */}
+          <div className="order-2 lg:order-1 flex justify-center" aria-hidden="true">
+            <div className="w-[320px] rounded-[40px] bg-navy-900 p-3 shadow-[0_30px_60px_-20px_rgba(7,30,51,0.5)]">
+              <div className="rounded-[30px] bg-surface overflow-hidden">
+                <div className="bg-navy-900 px-5 pt-6 pb-5 text-white">
+                  <p className="text-sm text-navy-100">{T('Good morning', 'صباح الخير')}</p>
+                  <p className="text-2xl font-extrabold">{T('Mr. Omar', 'السيد عمر')}</p>
                 </div>
+                <div className="p-4 space-y-3">
+                  <p className="text-base font-bold text-navy-900">{T('Shipments for your truck', 'شحنات تناسب شاحنتك')}</p>
+                  <div className="rounded-2xl bg-card border border-line p-4">
+                    <p className="text-xl font-extrabold text-navy-900">{T('Amman → Irbid', 'عمّان ← إربد')}</p>
+                    <p className="text-sm text-ink-muted mt-1">{T('85 km · Tomorrow 08:00', '85 كم · غداً 08:00')}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-[#DBEAFE] text-[#1D4ED8] px-2.5 py-1 text-xs font-bold inline-flex items-center gap-1"><Snowflake className="h-3 w-3" />{T('Chilled', 'مبرّد')}</span>
+                      <span className="rounded-full bg-surface text-ink px-2.5 py-1 text-xs font-bold inline-flex items-center gap-1"><PackageCheck className="h-3 w-3" />{T('You load', 'تحمّل بنفسك')}</span>
+                    </div>
+                    <div className="mt-4 flex items-end justify-between">
+                      <span className="text-sm text-ink-muted">{T('Your earnings', 'أرباحك')}</span>
+                      <span className="text-2xl font-extrabold text-navy-900 tabular-nums" dir="ltr">264.000 JD</span>
+                    </div>
+                    <div className="mt-4 h-14 rounded-2xl bg-[#15803D] text-white text-lg font-bold flex items-center justify-center">
+                      {T('Accept shipment', 'قبول الشحنة')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="order-1 lg:order-2">
+            <SectionTitle
+              kicker={T('For drivers', 'للسائقين')}
+              title={T('Shipments that fit your truck. Your earnings before you accept.', 'شحنات تناسب شاحنتك. وأرباحك واضحة قبل القبول.')}
+            />
+            <ul className="mt-8 space-y-5">
+              {[
+                { icon: Truck, en: 'Only shipments your truck and license can carry.', ar: 'فقط الشحنات التي تناسب شاحنتك ورخصتك.' },
+                { icon: Wallet, en: 'You see exactly what you will earn — before you say yes.', ar: 'ترى أرباحك بالضبط قبل أن توافق.' },
+                { icon: ShieldCheck, en: 'Big buttons, plain words. Made for long days on the road.', ar: 'أزرار كبيرة وكلمات واضحة. مصمم لأيام الطريق الطويلة.' },
+              ].map((x) => (
+                <li key={x.en} className="flex gap-4">
+                  <span className="h-11 w-11 shrink-0 rounded-xl bg-navy-100 text-navy-700 flex items-center justify-center">
+                    <x.icon className="h-5 w-5" />
+                  </span>
+                  <span className="pt-2 text-base text-ink leading-relaxed">{isAr ? x.ar : x.en}</span>
+                </li>
+              ))}
+            </ul>
+            <Link to="/signup/driver" className="mt-10 h-12 px-6 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-bold inline-flex items-center gap-2">
+              {T('Join as a driver', 'انضم كسائق')} <ArrowRight className="h-4 w-4 rtl:-scale-x-100" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Escrow */}
+      <section id="escrow" className="scroll-mt-20 bg-navy-900 py-20 lg:py-28">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <SectionTitle
+            light
+            kicker={T('Your money is protected', 'أموالك محمية')}
+            title={T('Nobody touches the money until the goods arrive.', 'لا أحد يلمس المبلغ قبل وصول البضاعة.')}
+          />
+          <div className="mt-12 grid md:grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch gap-4">
+            {[
+              { icon: CreditCard, en: ['Paid in', 'You pay the shipment price into escrow when you post it.'], ar: ['يُدفع', 'تدفع سعر الشحنة في حساب الضمان عند طلبها.'] },
+              { icon: Lock, en: ['Held', 'The escrow company keeps it safe while the truck is on the road.'], ar: ['يُحفظ', 'تحتفظ شركة الضمان بالمبلغ والشاحنة على الطريق.'] },
+              { icon: Banknote, en: ['Released', 'When you confirm delivery, the driver is paid automatically.'], ar: ['يُصرف', 'عند تأكيدك للتسليم، يُصرف للسائق تلقائياً.'] },
+            ].map((x, i, arr) => (
+              <React.Fragment key={x.en[0]}>
+                <div className="rounded-2xl bg-navy-800 border border-navy-700 p-6">
+                  <span className="h-12 w-12 rounded-xl bg-amber-500 text-navy-900 flex items-center justify-center">
+                    <x.icon className="h-6 w-6" />
+                  </span>
+                  <p className="mt-5 text-xl font-extrabold text-white">{isAr ? x.ar[0] : x.en[0]}</p>
+                  <p className="mt-2 text-navy-100 leading-relaxed">{isAr ? x.ar[1] : x.en[1]}</p>
+                </div>
+                {i < arr.length - 1 && (
+                  <span aria-hidden="true" className="hidden md:flex items-center">
+                    <span className="w-10 border-t-[4px] border-dotted border-amber-500" />
+                  </span>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Trucks we cover */}
+      <section className="py-20 lg:py-28">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <SectionTitle kicker={T('Trucks we cover', 'الشاحنات التي نغطيها')} title={T('From a pickup to a tanker.', 'من البيك أب حتى الصهريج.')} />
+          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 border border-line rounded-3xl overflow-hidden bg-card divide-y sm:divide-y-0 sm:divide-x rtl:divide-x-reverse divide-line">
+            {truckCoverage.map((tc) => (
+              <div key={tc.id} className="p-6">
+                <p className="text-sm font-bold text-[#8A5A00]">{isAr ? tc.weightAr : tc.weightEn}</p>
+                <p className="mt-1 text-xl font-extrabold text-navy-900">{isAr ? tc.nameAr : tc.nameEn}</p>
+                <p className="mt-3 text-sm text-ink-muted leading-relaxed">{isAr ? tc.bodiesAr : tc.bodiesEn}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 8. Section 6: Trust Strip & Testimonials */}
-      <section className="py-20 bg-card border-b border-line">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-16">
-          {/* Metrics Strip */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center border-b border-line pb-12">
-            <div>
-              <span className="text-3xl sm:text-4xl font-black text-navy-900 font-mono block">
-                {statsData.shipments}
-              </span>
-              <span className="text-xs text-ink-muted mt-1 block">
-                {isAr ? 'شحنة نُفذت بنجاح' : 'Delivered Shipments'}
-              </span>
-            </div>
-            <div>
-              <span className="text-3xl sm:text-4xl font-black text-emerald-700 font-mono block">
-                {statsData.escrowProtected}
-              </span>
-              <span className="text-xs text-ink-muted mt-1 block">
-                {isAr ? 'أموال محمية بالضمان' : 'Secured Escrow Volume'}
-              </span>
-            </div>
-            <div>
-              <span className="text-3xl sm:text-4xl font-black text-navy-900 font-mono block">
-                {statsData.drivers}
-              </span>
-              <span className="text-xs text-ink-muted mt-1 block">
-                {isAr ? 'سائق شحن معتمد' : 'Verified Freight Drivers'}
-              </span>
-            </div>
-            <div>
-              <span className="text-3xl sm:text-4xl font-black text-amber-500 font-mono flex items-center justify-center gap-1">
-                <span>{statsData.rating}</span>
-                <Star className="w-5 h-5 fill-amber-500" />
-              </span>
-              <span className="text-xs text-ink-muted mt-1 block">
-                {isAr ? 'متوسط تقييم الشحنات' : 'Average Platform Rating'}
-              </span>
-            </div>
-          </div>
-
-          {/* Testimonials */}
-          <div>
-            <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-              <h3 className="text-xl sm:text-2xl font-black text-navy-900">
-                {isAr ? 'ماذا يقول شركاء مسار؟' : 'Trusted by Shippers and Drivers Alike'}
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {testimonials.map((t) => (
-                <div
-                  key={t.id}
-                  className="bg-surface/50 border border-line rounded-3xl p-6 space-y-4 flex flex-col justify-between"
-                >
-                  <div className="space-y-3">
-                    <div className="flex text-amber-500">
-                      {[...Array(t.stars)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-amber-500" />
-                      ))}
-                    </div>
-                    <p className="text-xs text-navy-900 italic leading-relaxed">
-                      "{isAr ? t.quoteAr : t.quoteEn}"
-                    </p>
-                  </div>
-
-                  <div className="pt-4 border-t border-line">
-                    <span className="font-bold text-navy-900 text-xs block">
-                      {isAr ? t.nameAr : t.nameEn}
-                    </span>
-                    <span className="text-[11px] text-ink-muted block mt-0.5">
-                      {isAr ? t.roleAr : t.roleEn}
-                    </span>
-                  </div>
+      {/* Trust */}
+      <section className="bg-card border-y border-line py-20">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <dl className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              [statsData.shipments, T('Shipments delivered', 'شحنة مُسلّمة')],
+              [statsData.drivers, T('Verified drivers', 'سائق موثّق')],
+              [statsData.manufacturers, T('Manufacturers', 'مصنع')],
+              [`${statsData.rating}`, T('Average rating', 'متوسط التقييم'), true],
+            ].map(([v, l, star]) => (
+              <div key={l}>
+                <dt className="text-sm text-ink-muted">{l}</dt>
+                <dd className="mt-1 text-4xl font-extrabold text-navy-900 tabular-nums flex items-center gap-2" dir="ltr">
+                  {v}
+                  {star && <Star className="h-7 w-7 fill-amber-500 text-amber-500" />}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-16 grid md:grid-cols-3 gap-6">
+            {testimonials.map((tm) => (
+              <figure key={tm.id} className="rounded-2xl bg-surface p-6 flex flex-col">
+                <div className="flex gap-0.5" aria-label={`${tm.stars} / 5`}>
+                  {Array.from({ length: tm.stars }).map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-amber-500 text-amber-500" />
+                  ))}
                 </div>
-              ))}
+                <blockquote className="mt-4 text-[15px] leading-relaxed text-ink flex-1">“{isAr ? tm.quoteAr : tm.quoteEn}”</blockquote>
+                <figcaption className="mt-5 pt-4 border-t border-line">
+                  <p className="text-sm font-bold text-navy-900">{isAr ? tm.nameAr : tm.nameEn}</p>
+                  <p className="text-xs text-ink-muted">{isAr ? tm.roleAr : tm.roleEn}</p>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-20 lg:py-24">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8">
+          <div className="relative overflow-hidden rounded-[32px] bg-navy-900 px-8 py-14 sm:px-14 text-center">
+            <svg aria-hidden="true" className="absolute inset-x-0 bottom-0 w-full h-24" viewBox="0 0 800 100" preserveAspectRatio="none">
+              <path d="M0 80 C 200 80, 260 30, 400 40 S 640 80, 800 30" fill="none" stroke="#F5A82A" strokeWidth="5" strokeLinecap="round" strokeDasharray="0.1 16" opacity="0.7" />
+            </svg>
+            <h2 className="relative text-3xl sm:text-4xl font-extrabold text-white tracking-tight">{T('Your next shipment starts here.', 'شحنتك القادمة تبدأ هنا.')}</h2>
+            <p className="relative mt-3 text-navy-100 text-lg">{T('Create an account in a few minutes. We review it the same day.', 'أنشئ حساباً خلال دقائق، ونراجعه في نفس اليوم.')}</p>
+            <div className="relative mt-8 flex flex-wrap justify-center gap-3">
+              <Link to="/signup/manufacturer" className="h-14 px-7 rounded-2xl bg-amber-500 hover:bg-amber-600 text-navy-900 font-extrabold inline-flex items-center gap-2">
+                {T('Ship with Masar', 'اشحن مع مسار')} <ArrowRight className="h-5 w-5 rtl:-scale-x-100" />
+              </Link>
+              <Link to="/signup/driver" className="h-14 px-7 rounded-2xl border-2 border-navy-700 hover:border-amber-500 text-white font-bold inline-flex items-center gap-2">
+                {T('Drive with Masar', 'اعمل سائقًا مع مسار')}
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 9. Final CTA */}
-      <section className="py-20 bg-navy-900 text-white text-center">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-6">
-          <h2 className="text-2xl sm:text-4xl font-black tracking-tight">
-            {isAr
-              ? 'جاهز لتجربة أسرع وأأمن شحن لبضائعك؟'
-              : 'Ready to Experience Seamless, SafePay Freight?'}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
-            {isAr
-              ? 'انضم إلى شبكة مسار اليوم. لا رسوم خفية، وأموالك محمية حتى الاستلام.'
-              : 'Join Masar today. No hidden fees, zero risk, and complete escrow protection.'}
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-4">
-            <Link
-              to="/signup/manufacturer"
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-navy-900 font-black text-sm transition shadow-lg"
-            >
-              {isAr ? 'اشحن بضاعتك الآن' : 'Ship with Masar'}
-            </Link>
-
-            <Link
-              to="/signup/driver"
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-navy-800 hover:bg-navy-700 text-white font-bold text-sm border border-slate-700 transition"
-            >
-              {isAr ? 'سجّل كسائق معتمد' : 'Register as Driver'}
-            </Link>
+      {/* Footer */}
+      <footer className="border-t border-line bg-card">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 py-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <Logo tone="dark" size={20} lang={isAr ? 'ar' : 'en'} />
+            <span className="text-sm text-ink-muted">© {new Date().getFullYear()} Masar</span>
           </div>
-        </div>
-      </section>
-
-      {/* 10. Footer */}
-      <footer className="bg-navy-950 text-slate-400 py-12 border-t border-navy-800 text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-500 text-navy-900 flex items-center justify-center font-black">
-              <Truck className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <span className="font-black text-white text-base">MASAR (مسار)</span>
-            <span className="text-[11px] text-slate-500">© 2026 Masar Freight & Escrow Platform</span>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <a
-              href="mailto:support@masar.jo"
-              className="hover:text-white transition"
-            >
-              support@masar.jo
-            </a>
-            <Link to="/login" className="hover:text-white transition">
-              {isAr ? 'تسجيل الدخول' : 'Sign In'}
-            </Link>
-            <Link to="/signup" className="hover:text-white transition">
-              {isAr ? 'حساب جديد' : 'Sign Up'}
-            </Link>
-            <button
-              onClick={toggleLang}
-              className="text-amber-400 hover:underline font-bold"
-            >
-              {isAr ? 'English' : 'عربي'}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-semibold text-navy-900">
+            <a href="mailto:support@masar.jo" className="hover:underline" dir="ltr">support@masar.jo</a>
+            <Link to="/login" className="hover:underline">{T('Log in', 'دخول')}</Link>
+            <Link to="/signup" className="hover:underline">{T('Sign up', 'إنشاء حساب')}</Link>
+            <button onClick={() => setLanguage(isAr ? 'en' : 'ar')} className="inline-flex items-center gap-1.5 hover:underline">
+              <Globe className="h-4 w-4" /> {isAr ? 'English' : 'العربية'}
             </button>
           </div>
         </div>
@@ -770,4 +582,3 @@ export default function Landing() {
     </div>
   );
 }
-

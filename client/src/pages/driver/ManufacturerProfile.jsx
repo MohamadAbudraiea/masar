@@ -39,7 +39,7 @@ export default function DriverManufacturerProfile() {
 
   if (!company) {
     return (
-      <div className="p-8 text-center text-xs text-ink-muted">
+      <div className="p-8 text-center text-[15px] text-ink-muted">
         {isAr ? 'الشركة غير موجودة أو ليس لديك إذن بعرضها' : 'Company not found or access restricted'}
       </div>
     );
@@ -51,7 +51,7 @@ export default function DriverManufacturerProfile() {
       <div>
         <Link
           to="/driver"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted hover:text-navy-900"
+          className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-ink-muted hover:text-navy-900"
         >
           <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
           <span>{isAr ? 'العودة للشحنات' : 'Back to Shipments'}</span>
@@ -66,7 +66,7 @@ export default function DriverManufacturerProfile() {
           </div>
           <div>
             <h1 className="text-lg font-black text-navy-900">{company.name}</h1>
-            <div className="flex items-center gap-1.5 text-xs text-amber-600 font-bold mt-0.5">
+            <div className="flex items-center gap-1.5 text-[15px] text-amber-600 font-bold mt-0.5">
               <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
               <span>
                 {company.avg_stars || '5.0'} ({company.ratings_count || 0})
@@ -78,7 +78,7 @@ export default function DriverManufacturerProfile() {
         {/* Direct Call Button */}
         <a
           href={`tel:${company.phone}`}
-          className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition"
+          className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[15px] flex items-center justify-center gap-2 shadow-xs transition"
         >
           <Phone className="h-4 w-4" />
           <span>{isAr ? 'الاتصال بالمصنع:' : 'Call Factory:'}</span>
@@ -88,7 +88,7 @@ export default function DriverManufacturerProfile() {
 
       {/* Locations */}
       {company.locations?.length > 0 && (
-        <div className="bg-card rounded-2xl border border-line p-4 space-y-2 text-xs">
+        <div className="bg-card rounded-2xl border border-line p-4 space-y-2 text-[15px]">
           <h3 className="font-bold text-navy-900 flex items-center gap-1.5 border-b border-line pb-2">
             <MapPin className="h-4 w-4 text-navy-700" />
             <span>{isAr ? 'مواقع المصنع والمستودعات' : 'Factory Locations'}</span>
@@ -101,7 +101,7 @@ export default function DriverManufacturerProfile() {
                   <div className="font-semibold text-navy-900">
                     {loc.city} {loc.area ? `· ${loc.area}` : ''}
                   </div>
-                  <div className="text-[11px] text-ink-muted">{loc.address}</div>
+                  <div className="text-sm text-ink-muted">{loc.address}</div>
                 </div>
 
                 {loc.lat && loc.lng && (
@@ -121,7 +121,7 @@ export default function DriverManufacturerProfile() {
       )}
 
       {/* Ratings and Reviews */}
-      <div className="bg-card rounded-2xl border border-line p-4 space-y-2 text-xs">
+      <div className="bg-card rounded-2xl border border-line p-4 space-y-2 text-[15px]">
         <h3 className="font-bold text-navy-900 flex items-center gap-1.5 border-b border-line pb-2">
           <Star className="h-4 w-4 text-amber-500" />
           <span>{isAr ? 'تقييمات السائقين للمصنع' : 'Driver Reviews'}</span>
@@ -142,7 +142,7 @@ export default function DriverManufacturerProfile() {
           ))}
 
           {ratings.length === 0 && (
-            <div className="py-6 text-center text-xs text-ink-muted">
+            <div className="py-6 text-center text-[15px] text-ink-muted">
               {isAr ? 'لا توجد مراجعات مسجلة' : 'No driver reviews yet'}
             </div>
           )}

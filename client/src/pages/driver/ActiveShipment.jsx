@@ -86,7 +86,7 @@ export default function ActiveShipment() {
     return (
       <div className="py-24 flex flex-col items-center justify-center gap-3">
         <TruckLoader size="md" />
-        <span className="text-xs text-ink-muted">{isAr ? 'جاري التحقق من الشحنة النشطة...' : 'Checking active trip...'}</span>
+        <span className="text-[15px] text-ink-muted">{isAr ? 'جاري التحقق من الشحنة النشطة...' : 'Checking active trip...'}</span>
       </div>
     );
   }
@@ -101,7 +101,7 @@ export default function ActiveShipment() {
           <h3 className="text-base font-black text-navy-900">
             {isAr ? 'ليس لديك شحنة نشطة حالياً' : 'No Active Shipment Right Now'}
           </h3>
-          <p className="text-xs text-ink-muted max-w-xs mx-auto leading-relaxed">
+          <p className="text-[15px] text-ink-muted max-w-xs mx-auto leading-relaxed">
             {isAr
               ? 'أنت متاح وجاهز. تصفح الشحنات المفتوحة التي تطابق شاحنتك وابدأ رحلتك القادمة.'
               : 'You are free and ready for trips. Browse available shipments matching your truck.'}
@@ -109,7 +109,7 @@ export default function ActiveShipment() {
         </div>
         <button
           onClick={() => navigate('/driver')}
-          className="px-6 py-3 rounded-xl bg-navy-900 text-white font-bold text-xs shadow-xs hover:bg-navy-800"
+          className="px-6 py-3 rounded-xl bg-navy-900 text-white font-bold text-[15px] shadow-xs hover:bg-navy-800"
         >
           {isAr ? 'تصفح الشحنات المتاحة' : 'Browse Open Shipments'}
         </button>
@@ -125,7 +125,7 @@ export default function ActiveShipment() {
       {/* Active Trip Header */}
       <div className="bg-navy-900 text-white rounded-2xl p-5 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-mono font-bold text-amber-400">
+          <span className="text-[15px] font-bold text-amber-400">
             {ticket.ticket_number}
           </span>
           <StatusChip status={ticket.status} roleMode="driver" />
@@ -138,10 +138,10 @@ export default function ActiveShipment() {
         </div>
 
         <div className="bg-navy-800/80 rounded-xl p-3 flex items-center justify-between">
-          <span className="text-xs text-slate-300 font-medium">
+          <span className="text-[15px] text-slate-300 font-medium">
             {isAr ? 'أرباحك في سيف باي:' : 'Your Escrow Earnings:'}
           </span>
-          <span className="text-base font-black font-mono text-emerald-400">
+          <span className="text-base font-black text-emerald-400">
             {formatMoney(ticket.earnings)}
           </span>
         </div>
@@ -150,19 +150,19 @@ export default function ActiveShipment() {
       {/* Pickup Section */}
       <div className="bg-card rounded-2xl border border-line p-4 space-y-3">
         <div className="flex items-center justify-between border-b border-line pb-2">
-          <h3 className="text-xs font-bold text-navy-900 flex items-center gap-1.5">
+          <h3 className="text-[15px] font-bold text-navy-900 flex items-center gap-1.5">
             <MapPin className="w-4 h-4 text-emerald-600" />
             <span>{isAr ? 'موقع التحميل (المصنع)' : 'Pickup Location'}</span>
           </h3>
           {hasArrived && (
-            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-sm font-bold">
               ✓ {isAr ? 'تم تسجيل الوصول' : 'Arrived'}
             </span>
           )}
         </div>
 
-        <p className="text-xs font-bold text-navy-900">{ticket.pickup?.address}</p>
-        <div className="text-[11px] text-ink-muted">
+        <p className="text-[15px] font-bold text-navy-900">{ticket.pickup?.address}</p>
+        <div className="text-sm text-ink-muted">
           {ticket.pickup?.city} · {formatDateTime(ticket.pickup_at)}
         </div>
 
@@ -173,7 +173,7 @@ export default function ActiveShipment() {
               href={`https://www.google.com/maps/search/?api=1&query=${ticket.pickup.lat},${ticket.pickup.lng}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="py-2.5 px-3 rounded-xl border border-line bg-white hover:bg-slate-50 text-navy-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs"
+              className="py-2.5 px-3 rounded-xl border border-line bg-white hover:bg-slate-50 text-navy-900 text-[15px] font-bold flex items-center justify-center gap-1.5 shadow-2xs"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>{isAr ? 'خريطة جوجل' : 'Open Map'}</span>
@@ -183,7 +183,7 @@ export default function ActiveShipment() {
           {ticket.manufacturer?.phone && (
             <a
               href={`tel:${ticket.manufacturer.phone}`}
-              className="py-2.5 px-3 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs"
+              className="py-2.5 px-3 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-900 text-[15px] font-bold flex items-center justify-center gap-1.5 shadow-2xs"
             >
               <Phone className="w-3.5 h-3.5" />
               <span>{isAr ? 'اتصال بالمصنع' : 'Call Factory'}</span>
@@ -194,13 +194,13 @@ export default function ActiveShipment() {
 
       {/* Destination Section */}
       <div className="bg-card rounded-2xl border border-line p-4 space-y-3">
-        <h3 className="text-xs font-bold text-navy-900 flex items-center gap-1.5 border-b border-line pb-2">
+        <h3 className="text-[15px] font-bold text-navy-900 flex items-center gap-1.5 border-b border-line pb-2">
           <MapPin className="w-4 h-4 text-blue-600" />
           <span>{isAr ? 'موقع التسليم والمستلم' : 'Destination & Receiver'}</span>
         </h3>
 
-        <p className="text-xs font-bold text-navy-900">{ticket.dest?.address}</p>
-        <div className="text-xs text-slate-700">
+        <p className="text-[15px] font-bold text-navy-900">{ticket.dest?.address}</p>
+        <div className="text-[15px] text-slate-700">
           <span className="text-ink-muted">{isAr ? 'المستلم:' : 'Receiver:'}</span> {ticket.dest?.dest_name}
         </div>
 
@@ -210,7 +210,7 @@ export default function ActiveShipment() {
               href={`https://www.google.com/maps/search/?api=1&query=${ticket.dest.lat},${ticket.dest.lng}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="py-2.5 px-3 rounded-xl border border-line bg-white hover:bg-slate-50 text-navy-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs"
+              className="py-2.5 px-3 rounded-xl border border-line bg-white hover:bg-slate-50 text-navy-900 text-[15px] font-bold flex items-center justify-center gap-1.5 shadow-2xs"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>{isAr ? 'خريطة جوجل' : 'Open Map'}</span>
@@ -220,7 +220,7 @@ export default function ActiveShipment() {
           {ticket.dest?.dest_phone && (
             <a
               href={`tel:${ticket.dest.dest_phone}`}
-              className="py-2.5 px-3 rounded-xl border border-blue-300 bg-blue-50 text-blue-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs"
+              className="py-2.5 px-3 rounded-xl border border-blue-300 bg-blue-50 text-blue-900 text-[15px] font-bold flex items-center justify-center gap-1.5 shadow-2xs"
             >
               <Phone className="w-3.5 h-3.5" />
               <span>{isAr ? 'اتصال بالمستلم' : 'Call Receiver'}</span>
@@ -230,19 +230,19 @@ export default function ActiveShipment() {
       </div>
 
       {/* Cargo Quick Info */}
-      <div className="bg-card rounded-2xl border border-line p-4 space-y-2 text-xs">
+      <div className="bg-card rounded-2xl border border-line p-4 space-y-2 text-[15px]">
         <h3 className="font-bold text-navy-900 flex items-center gap-1.5 border-b border-line pb-2">
           <Package className="w-4 h-4 text-emerald-600" />
           <span>{isAr ? 'تفاصيل الحمولة' : 'Cargo Specs'}</span>
         </h3>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <span className="text-ink-muted block text-[11px]">{isAr ? 'البضاعة' : 'Cargo'}</span>
+            <span className="text-ink-muted block text-sm">{isAr ? 'البضاعة' : 'Cargo'}</span>
             <span className="font-bold text-navy-900">{ticket.goods?.category_name}</span>
           </div>
           <div>
-            <span className="text-ink-muted block text-[11px]">{isAr ? 'الكمية' : 'Quantity'}</span>
-            <span className="font-mono font-bold text-navy-900">
+            <span className="text-ink-muted block text-sm">{isAr ? 'الكمية' : 'Quantity'}</span>
+            <span className="font-bold text-navy-900">
               {ticket.goods?.quantity} {ticket.goods?.unit}
             </span>
           </div>
@@ -269,10 +269,10 @@ export default function ActiveShipment() {
 
         {ticket.status === 'waiting_load' && hasArrived && (
           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-1">
-            <div className="text-xs font-bold text-amber-900">
+            <div className="text-[15px] font-bold text-amber-900">
               ✓ {isAr ? 'تم تسجيل وصولك لموقع التحميل' : 'Arrival logged at pickup'}
             </div>
-            <p className="text-[11px] text-amber-700">
+            <p className="text-sm text-amber-700">
               {isAr
                 ? 'بانتظار تأكيد المصنع تحميل البضاعة لبدء رحلة التوصيل...'
                 : 'Waiting for factory to confirm goods loaded to start delivery...'}
@@ -314,20 +314,20 @@ export default function ActiveShipment() {
         cancelText={isAr ? 'تراجع' : 'Cancel'}
       >
         <div className="space-y-3">
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-line space-y-2 text-xs">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-navy-800">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-line space-y-2 text-[15px]">
+            <div className="text-sm font-bold uppercase tracking-wider text-navy-800">
               {isAr ? 'وجهة التسليم والمستلم' : 'Destination & Recipient'}
             </div>
             <div className="font-semibold text-navy-900">{ticket.dest?.address}</div>
             <div className="text-slate-600">
               <span>{ticket.dest?.dest_name}</span>
               {ticket.dest?.dest_phone && (
-                <span className="ms-2 font-mono text-emerald-700">({ticket.dest?.dest_phone})</span>
+                <span className="ms-2 text-emerald-700">({ticket.dest?.dest_phone})</span>
               )}
             </div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 leading-relaxed">
+          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-[15px] text-emerald-900 leading-relaxed">
             {isAr
               ? 'فور تأكيد التسليم، ستصبح متاحاً لتلقي طلبات جديدة وسيتم تحويل أرباحك فور تأكيد المصنع.'
               : 'You will immediately become available for new jobs, and your earnings will be released upon manufacturer confirmation.'}

@@ -44,7 +44,7 @@ export default function DriverHistory() {
       <div className="flex items-center justify-between">
         <Link
           to="/driver/me"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted hover:text-navy-900"
+          className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-ink-muted hover:text-navy-900"
         >
           <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
           <span>{isAr ? 'العودة للملف الشخصي' : 'Back to Profile'}</span>
@@ -55,13 +55,13 @@ export default function DriverHistory() {
         <h1 className="text-xl font-black text-navy-900">
           {isAr ? 'سجل الشحنات السابقة' : 'Shipment History'}
         </h1>
-        <p className="text-xs text-ink-muted">
+        <p className="text-[15px] text-ink-muted">
           {isAr ? 'كافة الشحنات المسلمة والمكتملة' : 'All delivered and completed freight trips'}
         </p>
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-card rounded-xl border border-line p-3 space-y-2 text-xs">
+      <div className="bg-card rounded-xl border border-line p-3 space-y-2 text-[15px]">
         <div className="relative">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-muted" />
           <input
@@ -69,7 +69,7 @@ export default function DriverHistory() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={isAr ? 'بحث برقم الشحنة...' : 'Search by shipment #...'}
-            className="w-full ps-8 pe-3 py-1.5 bg-surface/50 border border-line rounded-lg text-xs focus:outline-none"
+            className="w-full ps-8 pe-3 py-1.5 bg-surface/50 border border-line rounded-lg text-[15px] focus:outline-none"
           />
         </div>
 
@@ -79,14 +79,14 @@ export default function DriverHistory() {
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="bg-surface/50 border border-line px-2 py-1 rounded text-[11px]"
+            className="bg-surface/50 border border-line px-2 py-1 rounded text-sm"
           />
           <span>→</span>
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="bg-surface/50 border border-line px-2 py-1 rounded text-[11px]"
+            className="bg-surface/50 border border-line px-2 py-1 rounded text-sm"
           />
         </div>
       </div>
@@ -96,13 +96,13 @@ export default function DriverHistory() {
         {loading ? (
           <TruckLoader message={isAr ? 'جاري تحميل السجل...' : 'Loading history...'} />
         ) : tickets.length === 0 ? (
-          <div className="text-center py-8 text-xs text-ink-muted">
+          <div className="text-center py-8 text-[15px] text-ink-muted">
             {isAr ? 'لا توجد شحنات مطابقة في السجل' : 'No matching historical shipments'}
           </div>
         ) : (
           <div className="divide-y divide-line/60">
             {tickets.map((t) => (
-              <div key={t.id} className="py-3 text-xs space-y-1">
+              <div key={t.id} className="py-3 text-[15px] space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-navy-900">{t.ticket_number}</span>
                   <StatusChip status={t.status} />
@@ -111,10 +111,10 @@ export default function DriverHistory() {
                   {t.pickup?.city || t.pickup_city} → {t.dest?.city || t.dest_city}
                 </div>
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-[10px] text-ink-muted">
+                  <span className="text-sm text-ink-muted">
                     {formatDateTime(t.created_at)}
                   </span>
-                  <span className="font-black text-emerald-600 font-mono">
+                  <span className="font-black text-emerald-600">
                     +{formatMoney(t.earnings)}
                   </span>
                 </div>

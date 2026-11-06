@@ -9,6 +9,7 @@ import DataTable from '../../components/DataTable.jsx';
 import StatusChip from '../../components/StatusChip.jsx';
 import { formatDateTime } from '../../lib/time.js';
 import { formatMoney } from '../../lib/format.js';
+import { MONEY_COLS } from '../../lib/moneyColors.js';
 import { linkTo } from '../../lib/links.js';
 
 export default function AdminShipments() {
@@ -68,7 +69,7 @@ export default function AdminShipments() {
       key: 'ticket_number',
       header: isAr ? 'رقم الشحنة' : 'Shipment #',
       render: (val) => (
-        <span className="font-mono font-bold text-navy-900 hover:text-amber-600 transition flex items-center gap-1">
+        <span className="font-bold text-navy-900 flex items-center gap-1">
           {val}
           <ArrowUpRight className="h-3 w-3 text-ink-muted" />
         </span>
@@ -80,16 +81,16 @@ export default function AdminShipments() {
       render: (_, row) => (
         <div className="space-y-0.5">
           <Link
-            to={`/admin/manufacturers/${row.manufacturer_id}`}
+            to={`/admin/manufacturers/${(row.manufacturer?.id || row.manufacturer_id)}`}
             onClick={(e) => e.stopPropagation()}
             className="font-bold text-navy-900 hover:underline flex items-center gap-1"
           >
             <Building2 className="h-3 w-3 text-navy-700" />
             <span>{row.manufacturer?.name || row.manufacturer_name}</span>
           </Link>
-          {row.driver_id ? (
+          {(row.driver?.id || row.driver_id) ? (
             <Link
-              to={`/admin/drivers/${row.driver_id}`}
+              to={`/admin/drivers/${row.driver?.id || row.driver_id}`}
               onClick={(e) => e.stopPropagation()}
               className="text-[11px] text-ink-muted hover:text-navy-900 hover:underline flex items-center gap-1"
             >
@@ -97,7 +98,7 @@ export default function AdminShipments() {
               <span>{row.driver?.name || row.driver_name}</span>
             </Link>
           ) : (
-            <span className="text-[10px] text-ink-muted italic">{isAr ? 'لم يُعيّن' : 'Unassigned'}</span>
+            <span className="text-xs text-ink-muted">{isAr ? 'لا سائق بعد' : 'No driver yet'}</span>
           )}
         </div>
       ),
@@ -114,17 +115,20 @@ export default function AdminShipments() {
     {
       key: 'price',
       header: isAr ? 'السعر' : 'Price',
-      render: (val) => <span className="font-bold text-navy-900">{formatMoney(val)}</span>,
+      align: 'end',
+      render: (val) => <span className={`font-extrabold tabular-nums whitespace-nowrap ${MONEY_COLS.price.text}`}>{formatMoney(val)}</span>,
     },
     {
       key: 'masar_fee',
-      header: isAr ? 'إيراد مسار' : 'Masar Fee',
-      render: (val) => <span className="font-bold text-navy-700">{formatMoney(val)}</span>,
+      header: isAr ? 'إيراد مسار' : 'Masar fee',
+      align: 'end',
+      render: (val) => <span className={`font-semibold tabular-nums whitespace-nowrap ${MONEY_COLS.masar.text}`}>{formatMoney(val)}</span>,
     },
     {
       key: 'driver_net',
       header: isAr ? 'مستحق السائق' : 'Driver Net',
-      render: (val) => <span className="font-bold text-emerald-600 font-mono">{formatMoney(val)}</span>,
+      align: 'end',
+      render: (val) => <span className={`font-bold tabular-nums whitespace-nowrap ${MONEY_COLS.driver.text}`}>{formatMoney(val)}</span>,
     },
     {
       key: 'status',
@@ -147,6 +151,14 @@ export default function AdminShipments() {
       </div>
 
       <FilterBar
+        tabs={[
+          { value: '', label: isAr ? 'الكل' : 'All' },
+          { value: 'requested', label: isAr ? 'بانتظار الدفع' : 'Awaiting payment' },
+          { value: 'pending', label: isAr ? 'متاحة' : 'Open' },
+          { value: 'waiting_load,in_delivery', label: isAr ? 'قيد التنفيذ' : 'In progress' },
+          { value: 'delivered', label: isAr ? 'بانتظار التأكيد' : 'Awaiting confirmation' },
+          { value: 'audited', label: isAr ? 'مكتملة' : 'Confirmed' },
+        ]}
         filters={filters}
         onFilterChange={setFilter}
         onReset={resetFilters}

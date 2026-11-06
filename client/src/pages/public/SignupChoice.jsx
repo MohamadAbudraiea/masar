@@ -1,24 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Factory, Truck, ArrowRight, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { Factory, Truck, ArrowRight, ShieldCheck } from 'lucide-react';
+import AuthShell from '../../components/AuthShell.jsx';
 
 export default function SignupChoice() {
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-xl space-y-6">
-        {/* Header */}
+    <AuthShell maxWidth="max-w-2xl">
+      <div className="space-y-6">
         <div className="text-center space-y-2">
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted hover:text-navy-900 mb-2 transition"
-          >
-            {isAr ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
-            <span>{isAr ? 'العودة لتسجيل الدخول' : 'Back to Login'}</span>
-          </Link>
           <h1 className="text-2xl sm:text-3xl font-black text-navy-900 tracking-tight">
             {isAr ? 'انضم إلى شبكة مسار' : 'Join the Masar Network'}
           </h1>
@@ -37,7 +30,7 @@ export default function SignupChoice() {
             className="group p-6 rounded-3xl bg-card border border-line hover:border-amber-500 hover:shadow-lg transition flex flex-col justify-between space-y-6"
           >
             <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-[#8A5A00] flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
                 <Factory className="w-6 h-6 stroke-[2]" />
               </div>
               <div>
@@ -52,7 +45,7 @@ export default function SignupChoice() {
               </div>
             </div>
 
-            <div className="flex items-center text-xs font-bold text-amber-600 group-hover:text-amber-700">
+            <div className="flex items-center text-xs font-bold text-navy-900">
               <span>{isAr ? 'تسجيل كمصنّع' : 'Sign up as Manufacturer'}</span>
               <ArrowRight className="w-4 h-4 ms-1.5 rtl:rotate-180 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
             </div>
@@ -79,7 +72,7 @@ export default function SignupChoice() {
               </div>
             </div>
 
-            <div className="flex items-center text-xs font-bold text-navy-900 group-hover:text-amber-600">
+            <div className="flex items-center text-xs font-bold text-navy-900 ">
               <span>{isAr ? 'تسجيل كسائق' : 'Sign up as Driver'}</span>
               <ArrowRight className="w-4 h-4 ms-1.5 rtl:rotate-180 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
             </div>
@@ -92,7 +85,6 @@ export default function SignupChoice() {
           <span>{isAr ? 'جميع الحسابات تخضع لمراجعة وتدقيق الإدارة' : 'All accounts undergo official document verification'}</span>
         </div>
       </div>
-    </div>
+    </AuthShell>
   );
 }
-

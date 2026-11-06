@@ -18,15 +18,16 @@ import {
 import LocationPicker from '../../components/LocationPicker.jsx';
 import FileUpload from '../../components/FileUpload.jsx';
 import ErrorBoundary from '../../components/ErrorBoundary.jsx';
+import SignupWizard from '../../components/SignupWizard.jsx';
 import { apiClient } from '../../api/client.js';
 import { useAuth } from '../../state/auth.jsx';
 
 const STEPS = [
-  { id: 1, labelEn: 'Company', labelAr: 'المنشأة', icon: Building2 },
-  { id: 2, labelEn: 'Contacts', labelAr: 'الاتصال', icon: Phone },
-  { id: 3, labelEn: 'Location', labelAr: 'الموقع', icon: MapPin },
-  { id: 4, labelEn: 'Goods', labelAr: 'البضائع', icon: Boxes },
-  { id: 5, labelEn: 'Documents', labelAr: 'الوثائق', icon: FileCheck },
+  { id: 1, labelEn: 'Company', labelAr: 'المنشأة', icon: Building2, hintEn: 'Company name, contact person and password', hintAr: 'اسم الشركة، المسؤول وكلمة المرور' },
+  { id: 2, labelEn: 'Contacts', labelAr: 'الاتصال', icon: Phone, hintEn: 'Phones and emails we can reach you on', hintAr: 'الهواتف والبريد للتواصل معك' },
+  { id: 3, labelEn: 'Location', labelAr: 'الموقع', icon: MapPin, hintEn: 'Your factory — the default pickup point', hintAr: 'مصنعك — نقطة التحميل الافتراضية' },
+  { id: 4, labelEn: 'Goods', labelAr: 'البضائع', icon: Boxes, hintEn: 'What you ship, so we match the right trucks', hintAr: 'ما تشحنه لنطابقه بالشاحنات المناسبة' },
+  { id: 5, labelEn: 'Documents', labelAr: 'الوثائق', icon: FileCheck, hintEn: 'Two PDFs for verification', hintAr: 'ملفان PDF للتحقق' },
 ];
 
 export default function ManufacturerSignup() {
@@ -209,63 +210,18 @@ export default function ManufacturerSignup() {
 
   return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-surface flex flex-col justify-center items-center p-4">
-          <div className="w-full max-w-xl bg-card rounded-3xl border border-line p-6 sm:p-8 shadow-sm space-y-6">
-            {/* Brand Bar */}
-            <div className="flex items-center justify-between border-b border-line pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500 text-navy-900 flex items-center justify-center font-black">
-                  <Truck className="w-4 h-4 stroke-[2.5]" />
-                </div>
-                <div>
-                  <span className="text-sm font-black text-navy-900 block leading-tight">
-                    {isAr ? 'تسجيل مصنّع جديد' : 'Manufacturer Registration'}
-                  </span>
-                  <span className="text-[10px] text-ink-muted">
-                    {isAr ? `الخطوة ${currentStep} من ${STEPS.length}` : `Step ${currentStep} of ${STEPS.length}`}
-                  </span>
-                </div>
-              </div>
-              <Link
-                to="/signup"
-                className="text-xs font-semibold text-ink-muted hover:text-navy-900 transition"
-              >
-                {isAr ? 'إلغاء' : 'Cancel'}
-              </Link>
-            </div>
-
-            {/* Step Indicator */}
-            <div className="flex items-center justify-between px-1">
-              {STEPS.map((s, idx) => {
-                const isDone = s.id < currentStep;
-                const isCurrent = s.id === currentStep;
-                return (
-                  <div key={s.id} className="flex items-center gap-2">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isDone
-                          ? 'bg-amber-500 text-navy-900'
-                          : isCurrent
-                            ? 'bg-navy-900 text-white ring-2 ring-amber-300'
-                            : 'border border-line bg-surface text-slate-400'
-                        }`}
-                    >
-                      {isDone ? <Check className="w-4 h-4 stroke-[2.5]" /> : s.id}
-                    </div>
-                    {idx < STEPS.length - 1 && (
-                      <div
-                        className={`h-0.5 w-6 sm:w-12 rounded-full ${idx < currentStep - 1 ? 'bg-amber-500' : 'bg-line'
-                          }`}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Error Alert */}
+        <SignupWizard
+          title={isAr ? 'اشحن مع مسار' : 'Ship with Masar'}
+          subtitle={isAr ? 'أنشئ حساب شركتك في خمس خطوات قصيرة.' : 'Create your company account in five short steps.'}
+          steps={STEPS}
+          currentStep={currentStep}
+          onStepClick={(n) => { setError(null); setCurrentStep(n); }}
+          prepare={isAr ? ['السجل التجاري', 'رخصة المهن'] : ['Commercial registration', 'Professions license']}
+        >
+          {/* Error Alert */}
             {error && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+              <div role="alert" className="p-3 rounded-xl bg-[#FEE2E2] border border-[#FECACA] text-sm text-[#B91C1C] flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
@@ -286,7 +242,7 @@ export default function ManufacturerSignup() {
               {currentStep === 1 && (
                 <div className="space-y-4 animate-fadeIn">
                   <div>
-                    <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                    <label className="block text-sm font-bold text-navy-900 mb-1.5">
                       {isAr ? 'اسم المنشأة / الشركة' : 'Company / Factory Name'} *
                     </label>
                     <input
@@ -294,12 +250,12 @@ export default function ManufacturerSignup() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder={isAr ? 'شركة النور للصناعات الغذائية' : 'Al-Nour Foods Co.'}
-                      className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:outline-none focus:border-navy-700/40 focus:ring-4 focus:ring-navy-100"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                    <label className="block text-sm font-bold text-navy-900 mb-1.5">
                       {isAr ? 'اسم مسؤول التواصل' : 'Contact Person (Optional)'}
                     </label>
                     <input
@@ -307,12 +263,12 @@ export default function ManufacturerSignup() {
                       value={formData.contact_person}
                       onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
                       placeholder={isAr ? 'السيد خالد حداد' : 'Khaled Haddad'}
-                      className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:outline-none focus:border-navy-700/40 focus:ring-4 focus:ring-navy-100"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                    <label className="block text-sm font-bold text-navy-900 mb-1.5">
                       {isAr ? 'كلمة المرور' : 'Password'} *
                     </label>
                     <input
@@ -320,7 +276,7 @@ export default function ManufacturerSignup() {
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       placeholder="••••••••"
-                      className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:outline-none focus:border-navy-700/40 focus:ring-4 focus:ring-navy-100"
                     />
                     <span className="text-[10px] text-ink-muted">
                       {isAr ? '6 خانات على الأقل' : 'Minimum 6 characters'}
@@ -489,7 +445,7 @@ export default function ManufacturerSignup() {
                   <button
                     type="button"
                     onClick={prevStep}
-                    className="px-4 py-2.5 rounded-xl border border-line text-xs font-bold text-navy-900 hover:bg-slate-100 flex items-center gap-1.5"
+                    className="h-12 px-5 rounded-xl border border-line text-sm font-bold text-navy-900 hover:bg-surface flex items-center gap-1.5"
                   >
                     <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
                     <span>{isAr ? 'السابق' : 'Previous'}</span>
@@ -500,7 +456,7 @@ export default function ManufacturerSignup() {
                   <button
                     type="button"
                     onClick={nextStep}
-                    className="px-5 py-2.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                    className="h-12 px-6 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold flex items-center gap-1.5 shadow-sm"
                   >
                     <span>{isAr ? 'التالي' : 'Next'}</span>
                     <ArrowRight className="w-4 h-4 rtl:rotate-180" />
@@ -509,7 +465,7 @@ export default function ManufacturerSignup() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-navy-900 text-xs font-black flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                    className="h-12 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-navy-900 text-sm font-extrabold flex items-center gap-1.5 shadow-sm disabled:opacity-50"
                   >
                     {isSubmitting ? (isAr ? 'جاري الإرسال...' : 'Submitting...') : (isAr ? 'إرسال طلب التسجيل' : 'Submit Application')}
                     <Check className="w-4 h-4 stroke-[3]" />
@@ -517,8 +473,7 @@ export default function ManufacturerSignup() {
                 )}
               </div>
             </form>
-          </div>
-        </div>
+        </SignupWizard>
       </ErrorBoundary>
       );
 }

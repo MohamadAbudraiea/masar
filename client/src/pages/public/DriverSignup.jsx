@@ -15,14 +15,16 @@ import {
 import TruckSelector from '../../components/TruckSelector.jsx';
 import FileUpload from '../../components/FileUpload.jsx';
 import ErrorBoundary from '../../components/ErrorBoundary.jsx';
+import SignupWizard from '../../components/SignupWizard.jsx';
 import { apiClient } from '../../api/client.js';
 import { useAuth } from '../../state/auth.jsx';
 
 const STEPS = [
-  { id: 1, labelEn: 'Personal Info & Scope', labelAr: 'البيانات الشخصية ونطاق العمل', icon: User },
-  { id: 2, labelEn: 'License, Docs & Truck', labelAr: 'رخصة القيادة ومواصفات الشاحنة', icon: Truck },
-  { id: 3, labelEn: 'Payout Details', labelAr: 'الحساب البنكي وسيف باي', icon: CreditCard },
-];
+  { id: 1, labelEn: 'Details', labelAr: 'بياناتك', icon: User, hintEn: 'Name, phone, password and where you drive', hintAr: 'الاسم والهاتف وكلمة المرور ونطاق العمل' },
+  { id: 2, labelEn: 'Documents', labelAr: 'الوثائق', icon: FileCheck, hintEn: 'License class, ID and driving license', hintAr: 'فئة الرخصة، الهوية ورخصة القيادة' },
+  { id: 3, labelEn: 'Truck', labelAr: 'الشاحنة', icon: Truck, hintEn: 'Truck type, plate, license and photos', hintAr: 'نوع الشاحنة، اللوحة، الرخصة والصور' },
+  { id: 4, labelEn: 'Payout', labelAr: 'حساب الصرف', icon: CreditCard, hintEn: 'Where we send your earnings', hintAr: 'أين نحوّل أرباحك' },
+]
 
 export default function DriverSignup() {
   const { login } = useAuth();
@@ -142,7 +144,7 @@ export default function DriverSignup() {
         );
         return false;
       }
-
+    } else if (step === 3) {
       // Truck Specifications & Documents
       const t = formData.truck;
       if (!t.category || !t.type_code || !t.body_code || !t.plate_number.trim()) {
@@ -169,7 +171,7 @@ export default function DriverSignup() {
         );
         return false;
       }
-    } else if (step === 3) {
+    } else if (step === 4) {
       if (!formData.iban.trim() || !formData.iban.trim().startsWith('JO')) {
         setError(
           isAr
@@ -195,7 +197,7 @@ export default function DriverSignup() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!validateStep(3)) return;
+    if (![1, 2, 3, 4].every((n) => validateStep(n))) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -254,68 +256,18 @@ export default function DriverSignup() {
 
   return (
               <ErrorBoundary>
-                <div className="min-h-screen bg-surface flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8">
-                  <div className="max-w-xl w-full mx-auto bg-card rounded-2xl border border-line shadow-sm p-6 sm:p-8 space-y-6">
-                    {/* Header */}
-                    <div className="flex items-center justify-between border-b border-line pb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-amber-500 text-navy-900 flex items-center justify-center font-black">
-                          <Truck className="w-5 h-5 stroke-[2.5]" />
-                        </div>
-                        <div>
-                          <span className="text-sm font-black text-navy-900 block leading-tight">
-                            {isAr ? 'تسجيل سائق جديد' : 'Driver Registration'}
-                          </span>
-                          <span className="text-[10px] text-ink-muted">
-                            {isAr ? `الخطوة ${currentStep} من ${STEPS.length}` : `Step ${currentStep} of ${STEPS.length}`}
-                          </span>
-                        </div>
-                      </div>
-                      <Link
-                        to="/signup"
-                        className="text-xs font-semibold text-ink-muted hover:text-navy-900 transition"
-                      >
-                        {isAr ? 'إلغاء' : 'Cancel'}
-                      </Link>
-                    </div>
-
-                            {/* Step Indicator */ }
-                            < div className="flex items-center justify-between px-1">
-                          {STEPS.map((s, idx) => {
-                            const isDone = s.id < currentStep;
-                            const isCurrent = s.id === currentStep;
-                            return (
-                              <div key={s.id} className="flex items-center gap-2">
-                                <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isDone
-                                      ? 'bg-amber-500 text-navy-900'
-                                      : isCurrent
-                                        ? 'bg-navy-900 text-white ring-2 ring-amber-300'
-                                        : 'border border-line bg-surface text-slate-400'
-                                    }`}
-                  >
-                    {isDone ? <Check className="w-4 h-4 stroke-[2.5]" /> : s.id}
-                  </div>
-                  <span className="hidden sm:inline text-xs font-semibold text-slate-700">
-                    {isAr ? s.labelAr : s.labelEn}
-                  </span>
-                  {
-                          idx < STEPS.length - 1 && (
-                            <div
-                              className={`h-0.5 w-6 sm:w-12 rounded-full ${idx < currentStep - 1 ? 'bg-amber-500' : 'bg-line'
-                                }`}
-                            />
-                          )
-                        }
-                </div>
-                  );
-            })}
-                </div>
-
-                      {/* Error Alert */}
+                <SignupWizard
+          title={isAr ? 'اعمل سائقاً مع مسار' : 'Drive with Masar'}
+          subtitle={isAr ? 'أربع خطوات، ثم نراجع وثائقك.' : 'Four steps, then we review your documents.'}
+          steps={STEPS}
+          currentStep={currentStep}
+          onStepClick={(n) => { setError(null); setCurrentStep(n); }}
+          prepare={isAr ? ['الهوية الشخصية', 'رخصة القيادة', 'رخصة الشاحنة', '1–3 صور للشاحنة'] : ['National ID', 'Driving license', 'Truck license', '1–3 truck photos (images)']}
+        >
+          {/* Error Alert */}
                       {error && (
-                        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                        <div role="alert" className="p-3 rounded-xl bg-[#FEE2E2] border border-[#FECACA] text-sm text-[#B91C1C] flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
                           <span>{error}</span>
                         </div>
                       )}
@@ -335,7 +287,7 @@ export default function DriverSignup() {
                         {currentStep === 1 && (
                           <div className="space-y-4 animate-fadeIn">
                             <div>
-                              <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                              <label className="block text-sm font-bold text-navy-900 mb-1.5">
                                 {isAr ? 'الاسم الكامل للسائق' : 'Full Name'} *
                               </label>
                               <input
@@ -343,12 +295,12 @@ export default function DriverSignup() {
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 placeholder={isAr ? 'السيد عمر صالح' : 'Omar Saleh'}
-                                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:ring-2 focus:ring-amber-500"
+                                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:outline-none focus:border-navy-700/40 focus:ring-4 focus:ring-navy-100"
                               />
                             </div>
 
                             <div>
-                              <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                              <label className="block text-sm font-bold text-navy-900 mb-1.5">
                                 {isAr ? 'رقم الهاتف (مع رمز الدولة)' : 'Phone Number (with country code)'} *
                               </label>
                               <input
@@ -356,7 +308,7 @@ export default function DriverSignup() {
                                 value={formData.phone}
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 placeholder="+962791234567"
-                                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:ring-2 focus:ring-amber-500 font-mono"
+                                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:outline-none focus:border-navy-700/40 focus:ring-4 focus:ring-navy-100 font-mono"
                               />
                               <span className="text-[10px] text-ink-muted">
                                 {isAr ? 'أدخل الرقم كاملاً مع رمز الدولة (مثال: +96279...)' : 'Include country code, e.g. +962...'}
@@ -364,7 +316,7 @@ export default function DriverSignup() {
                             </div>
 
                             <div>
-                              <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                              <label className="block text-sm font-bold text-navy-900 mb-1.5">
                                 {isAr ? 'البريد الإلكتروني (اختياري)' : 'Email (Optional)'}
                               </label>
                               <input
@@ -372,12 +324,12 @@ export default function DriverSignup() {
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 placeholder="driver@example.com"
-                                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:ring-2 focus:ring-amber-500"
+                                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:outline-none focus:border-navy-700/40 focus:ring-4 focus:ring-navy-100"
                               />
                             </div>
 
                                 <div>
-                                  <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                                  <label className="block text-sm font-bold text-navy-900 mb-1.5">
                                     {isAr ? 'كلمة المرور' : 'Password'} *
                                   </label>
                                   <input
@@ -385,13 +337,13 @@ export default function DriverSignup() {
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     placeholder="••••••••"
-                                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:ring-2 focus:ring-amber-500"
+                                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-line bg-white text-ink focus:outline-none focus:border-navy-700/40 focus:ring-4 focus:ring-navy-100"
                                   />
                                 </div>
 
                                 {/* Work Scope Selection */}
                                 <div className="pt-1">
-                                  <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                                  <label className="block text-sm font-bold text-navy-900 mb-1.5">
                                     {isAr ? 'نطاق العمل' : 'Work Scope'} *
                                   </label>
                                   <div className="grid grid-cols-2 gap-2">
@@ -456,7 +408,7 @@ export default function DriverSignup() {
 
                                         {/* Driver License Class */}
                                         <div>
-                                          <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                                          <label className="block text-sm font-bold text-navy-900 mb-1.5">
                                             {isAr ? 'فئة رخصة القيادة' : 'Driver License Class'} *
                                           </label>
                                           <select
@@ -464,7 +416,7 @@ export default function DriverSignup() {
                                             onChange={(e) =>
                                               setFormData({ ...formData, license_class: Number(e.target.value) })
                                             }
-                                            className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border border-line bg-white text-navy-900 focus:outline-hidden focus:border-navy-900"
+                                            className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border border-line bg-white text-navy-900 focus:outline-none focus:border-navy-700/40 focus:ring-4 focus:ring-navy-100"
                                           >
                                             <option value={4}>
                                               {isAr ? 'الفئة 4 (نقل خفيف ومتوسط حتى 7.5 طن)' : 'Class 4 (Light & Medium up to 7.5t)'}
@@ -546,7 +498,12 @@ export default function DriverSignup() {
                                       </div>
                                     </div>
 
-                <div className="space-y-4 pt-2 border-t border-line">
+                                  </div>
+                                )}
+
+                                {currentStep === 3 && (
+                                  <div className="space-y-5 animate-fadeIn">
+                <div className="space-y-4">
                                         <div className="flex items-center gap-2 border-b border-line pb-2">
                                           <Truck className="w-4 h-4 text-amber-500" />
                                           <h3 className="text-xs font-black text-navy-900 uppercase tracking-wider">
@@ -568,7 +525,7 @@ export default function DriverSignup() {
 
                                         {/* Plate Number */}
                                         <div>
-                    <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                    <label className="block text-sm font-bold text-navy-900 mb-1.5">
                       {isAr ? 'رقم لوحة الشاحنة' : 'Plate Number'} *
                     </label>
                     <input
@@ -619,7 +576,7 @@ export default function DriverSignup() {
                               )}
 
                               {/* STEP 3: Payout Details & Guarantee */}
-                              {currentStep === 3 && (
+                              {currentStep === 4 && (
                                 <div className="space-y-4 animate-fadeIn">
                                   <p className="text-xs text-ink-muted">
                                     {isAr
@@ -628,7 +585,7 @@ export default function DriverSignup() {
                                   </p>
 
                               <div>
-                                <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                                <label className="block text-sm font-bold text-navy-900 mb-1.5">
                                   {isAr ? 'رقم الآيبان البنكي (IBAN)' : 'IBAN'} *
                                 </label>
                                 <input
@@ -644,7 +601,7 @@ export default function DriverSignup() {
                               </div>
 
                                   <div>
-                                    <label className="block text-xs font-bold text-navy-900 mb-1.5">
+                                    <label className="block text-sm font-bold text-navy-900 mb-1.5">
                                       {isAr ? 'معرّف كليك البنكي (CliQ Alias - اختياري)' : 'CliQ Alias (Optional)'}
                                     </label>
                                     <input
@@ -676,7 +633,7 @@ export default function DriverSignup() {
                                       <button
                                         type="button"
                                         onClick={prevStep}
-                                        className="px-4 py-2.5 rounded-xl border border-line text-xs font-bold text-navy-900 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer"
+                                        className="h-12 px-5 rounded-xl border border-line text-sm font-bold text-navy-900 hover:bg-surface flex items-center gap-1.5 cursor-pointer"
                                       >
                                         <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
                                         <span>{isAr ? 'السابق' : 'Previous'}</span>
@@ -689,7 +646,7 @@ export default function DriverSignup() {
                                       <button
                                         type="button"
                                         onClick={nextStep}
-                                        className="px-5 py-2.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+                                        className="h-12 px-6 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-sm font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
                                       >
                                         <span>{isAr ? 'التالي' : 'Next'}</span>
                                         <ArrowRight className="w-4 h-4 rtl:rotate-180" />
@@ -698,7 +655,7 @@ export default function DriverSignup() {
                                       <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-navy-900 text-xs font-black flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+                                        className="h-12 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-navy-900 text-sm font-extrabold flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
                                       >
                                         {isSubmitting
                                           ? isAr ? 'جاري الإرسال...' : 'Submitting...'
@@ -708,8 +665,7 @@ export default function DriverSignup() {
                                     )}
                                   </div>
           </form>
-                          </div>
-      </div>
-              </ErrorBoundary>
+        </SignupWizard>
+      </ErrorBoundary>
               );
 }
