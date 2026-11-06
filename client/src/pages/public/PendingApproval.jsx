@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Clock, AlertTriangle, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../../state/auth.jsx';
+import AuthShell from '../../components/AuthShell.jsx';
 
 export default function PendingApproval() {
   const { user, logout } = useAuth();
@@ -18,7 +19,7 @@ export default function PendingApproval() {
   }
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col justify-center items-center p-4">
+    <AuthShell maxWidth="max-w-md">
       <div className="w-full max-w-md bg-card rounded-3xl border border-line p-8 shadow-sm text-center space-y-6">
         <div
           className={`w-16 h-16 rounded-2xl mx-auto flex items-center justify-center ${
@@ -69,7 +70,7 @@ export default function PendingApproval() {
           </button>
         </div>
       </div>
-    </div>
+    </AuthShell>
   );
 }
 

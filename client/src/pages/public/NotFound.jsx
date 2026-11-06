@@ -1,4 +1,5 @@
 import React from 'react';
+import Logo from '../../components/Logo.jsx';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Compass, ArrowLeft, Home, Truck } from 'lucide-react';
@@ -11,9 +12,9 @@ export default function NotFound() {
   return (
     <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-6 text-center">
       <div className="w-full max-w-md bg-card border border-line rounded-3xl p-8 shadow-xs space-y-6 animate-fade-in">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 mb-2">
-          <Truck className="w-8 h-8" />
-        </div>
+        <Link to="/" className="inline-block mb-2" aria-label="Masar">
+          <Logo tone="dark" size={22} className="mx-auto" />
+        </Link>
 
         <div className="space-y-2">
           <span className="text-4xl font-black text-navy-900 tracking-tight font-mono block">

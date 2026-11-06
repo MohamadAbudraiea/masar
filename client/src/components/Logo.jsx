@@ -1,17 +1,13 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React from 'react';
+import logoLight from '../assets/brand/masar-logo-light.png';
+import logoDark from '../assets/brand/masar-logo-dark.png';
 
 /**
- * Masar brand mark, built from the brief in 05-UI-UX-GUIDE §1:
- * heavy rounded lowercase "masar" wordmark + a dotted amber route that
- * ends in a small truck attached to the "r".
+ * Masar brand: the official "masar" wordmark with the dotted amber route ending in a truck.
  *
- * To swap in the CEO's official logo file later, replace the <svg> bodies
- * below (or render an <img>) — every screen uses this component.
+ * LogoTruck / LogoMark are small SVG helpers drawn in the same style (used by the
+ * landing-page animation and the favicon); the wordmark itself is the official image.
  *
- * Props:
- *  - tone: 'light' (white wordmark, for navy backgrounds) | 'dark' (navy wordmark)
- *  - size: height in px of the wordmark (default 28)
- *  - lang: 'en' | 'ar'
  */
 export function LogoTruck({ x = 0, y = 0, scale = 1, body = '#FFFFFF', cab = '#FFFFFF', wheel = '#071E33' }) {
   return (
@@ -26,76 +22,27 @@ export function LogoTruck({ x = 0, y = 0, scale = 1, body = '#FFFFFF', cab = '#F
   );
 }
 
-export default function Logo({ tone = 'light', size = 28, lang = 'en', className = '' }) {
-  const ink = tone === 'light' ? '#FFFFFF' : '#071E33';
-  const truckWheel = tone === 'light' ? '#071E33' : '#FFFFFF';
-  const isAr = lang === 'ar';
-  const textRef = useRef(null);
-  // Measure the real wordmark width so the route + truck hug the last letter
-  // regardless of which font actually loaded.
-  const [tw, setTw] = useState(isAr ? 58 : 88);
-  useLayoutEffect(() => {
-    const measure = () => {
-      try {
-        const w = textRef.current?.getBBox().width;
-        if (w) setTw(Math.round(w));
-      } catch {
-        /* not rendered yet */
-      }
-    };
-    measure();
-    document.fonts?.ready?.then(measure);
-  }, [isAr]);
-
-  const truckW = 24;
-  const gap = 3;
-  const width = tw + gap + truckW + 2;
-  // LTR: word → route → truck at the end. RTL: mirrored (truck on the left, driving left).
-  const textX = isAr ? width : 0;
-  const routeFrom = isAr ? width - 2 : 2;
-  const routeTo = isAr ? truckW + gap + 2 : tw + gap - 1;
-  const truckX = isAr ? truckW : tw + gap;
-
+/**
+ * Official Masar logo (from the CEO's file). Two transparent versions were cut from it:
+ *  - light: white wordmark + amber route, for navy backgrounds
+ *  - dark:  navy wordmark + amber route, for light backgrounds
+ * The original is kept at src/assets/brand/masar-logo-original.jpg.
+ * The wordmark is Latin in both languages (it is the brand), so `lang` is accepted but not used.
+ *
+ * size ≈ the visual cap height you want; the image height is derived from it.
+ */
+export default function Logo({ tone = 'light', size = 28, className = '' }) {
+  const src = tone === 'light' ? logoLight : logoDark;
+  const height = Math.round(size * 1.55);
   return (
-    <svg
-      role="img"
-      aria-label={isAr ? 'مسار' : 'masar'}
-      height={size * (42 / 28)}
-      width={(size * (42 / 28) * width) / 42}
-      viewBox={`0 0 ${width} 42`}
-      className={className}
-      style={{ overflow: 'visible', direction: 'ltr' }}
-    >
-      <text
-        ref={textRef}
-        x={textX}
-        y="26"
-        textAnchor="start"
-        direction={isAr ? 'rtl' : 'ltr'}
-        fill={ink}
-        style={{
-          fontFamily: isAr ? '"IBM Plex Sans Arabic", sans-serif' : '"Plus Jakarta Sans", sans-serif',
-          fontWeight: isAr ? 700 : 800,
-          fontSize: isAr ? 28 : 31,
-          letterSpacing: isAr ? 0 : '-1.3px',
-        }}
-      >
-        {isAr ? 'مسار' : 'masar'}
-      </text>
-      <line
-        x1={routeFrom}
-        y1="36.5"
-        x2={routeTo}
-        y2="36.5"
-        stroke="#F5A82A"
-        strokeWidth="3.6"
-        strokeLinecap="round"
-        strokeDasharray="0.1 6.2"
-      />
-      <g transform={isAr ? `translate(${truckX} 0) scale(-1 1)` : `translate(${truckX} 0)`}>
-        <LogoTruck x={0} y={24} body={ink} cab={ink} wheel={truckWheel} />
-      </g>
-    </svg>
+    <img
+      src={src}
+      alt="Masar"
+      height={height}
+      style={{ height, width: 'auto' }}
+      className={`block select-none ${className}`}
+      draggable="false"
+    />
   );
 }
 

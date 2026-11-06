@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../state/auth.jsx';
 import { setLanguage } from '../i18n/index.js';
+import Logo from '../components/Logo.jsx';
 import PhoneFrame from '../components/PhoneFrame.jsx';
 import NotificationBell from '../components/NotificationBell.jsx';
 
@@ -36,9 +37,7 @@ export default function DriverLayout() {
       {/* 1. Driver App Header (Large, High Contrast) */}
       <header className="px-5 py-4 bg-navy-900 text-white shrink-0 shadow-sm flex items-center justify-between">
         <div>
-          <span className="text-[15px] text-amber-500 font-bold block uppercase tracking-wider">
-            {isAr ? 'تطبيق السائق' : 'Driver App'}
-          </span>
+          <Logo tone="light" size={14} className="mb-1.5" />
           <h2 className="text-xl font-black text-white truncate max-w-[200px]">
             {driverGreeting}
           </h2>
