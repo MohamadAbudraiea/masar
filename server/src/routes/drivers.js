@@ -281,7 +281,7 @@ router.get('/:id/completed', requireRole('manufacturer'), async (req, res, next)
         t.id,
         t.pickup_city,
         t.dest_city,
-        t.audited_at AS date,
+        COALESCE((t.status_history->>'audited')::timestamptz, (t.status_history->>'delivered')::timestamptz, t.updated_at, t.created_at) AS date,
         CASE
           WHEN t.manufacturer_id = $2 THEN t.ticket_number
           ELSE NULL
