@@ -90,7 +90,7 @@ test('GET /api/me - returns authenticated user and profile', async () => {
   assert.equal(meRes.status, 200);
   const meData = await meRes.json();
   assert.equal(meData.role, 'driver');
-  assert.equal(meData.name, 'Omar Saleh');
+  assert.equal(meData.name, 'Omar Ayman Saleh');
   assert.ok(meData.profile, 'Driver profile must exist');
   assert.equal(meData.profile.truck?.plate_number, '44-12345');
 });
