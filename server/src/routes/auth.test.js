@@ -26,7 +26,7 @@ test('POST /api/auth/login - valid email returns JWT and user', async () => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      identifier: 'khaled@alnour.demo',
+      identifier: 'mohamadabudraiea@gmail.com',
       password: 'Masar@123',
     }),
   });
@@ -52,7 +52,7 @@ test('POST /api/auth/login - valid phone works for driver', async () => {
   const data = await res.json();
   assert.ok(data.token);
   assert.equal(data.user.role, 'driver');
-  assert.equal(data.user.name, 'Omar Saleh');
+  assert.equal(data.user.name, 'Omar Ayman Saleh');
 });
 
 test('POST /api/auth/login - invalid password returns 401 BAD_CREDENTIALS', async () => {
@@ -60,7 +60,7 @@ test('POST /api/auth/login - invalid password returns 401 BAD_CREDENTIALS', asyn
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      identifier: 'khaled@alnour.demo',
+      identifier: 'mohamadabudraiea@gmail.com',
       password: 'WrongPassword',
     }),
   });

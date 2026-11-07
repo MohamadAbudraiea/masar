@@ -7,10 +7,10 @@ import { useAuth } from '../../state/auth.jsx';
 import { apiClient } from '../../api/client.js';
 
 const DEMO_ACCOUNTS = [
-  { role: 'manufacturer', name: 'Al-Nour Foods Co.', id: 'khaled@alnour.demo', labelEn: 'Manufacturer (Al-Nour)', labelAr: 'المصنّع (شركة النور)' },
-  { role: 'driver', name: 'Mr. Omar Saleh', id: '+962790010001', labelEn: 'Driver (Mr. Omar)', labelAr: 'السائق (السيد عمر)' },
-  { role: 'escrow', name: 'SafePay Escrow', id: 'escrow@safepay.demo', labelEn: 'Escrow (SafePay)', labelAr: 'حساب الضمان (سيف باي)' },
-  { role: 'admin', name: 'Lina Qasem', id: 'admin@masar.demo', labelEn: 'Admin (Masar Staff)', labelAr: 'الإدارة (فريق مسار)' },
+  { role: 'manufacturer', name: 'Al-Nour Foods Co.', id: 'mohamadabudraiea@gmail.com', labelEn: 'Manufacturer (Al-Nour)', labelAr: 'المصنّع (شركة النور)' },
+  { role: 'driver', name: 'Captain Omar Ayman', id: 'mohamadayman773@gmail.com', labelEn: 'Driver (Omar Ayman)', labelAr: 'السائق (عمر أيمن)' },
+  { role: 'escrow', name: 'SafePay Escrow', id: 'mohamadabudraiea2003@outlook.com', labelEn: 'Escrow (SafePay)', labelAr: 'حساب الضمان (سيف باي)' },
+  { role: 'admin', name: 'Mohamad Abu Draiea', id: 'mohamadabudraiea2003@gmail.com', labelEn: 'Admin (Masar Staff)', labelAr: 'الإدارة (فريق مسار)' },
 ];
 
 export default function Login() {

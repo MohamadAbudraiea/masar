@@ -25,7 +25,7 @@ test.before(async () => {
   const mLogin = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'khaled@alnour.demo', password: 'Masar@123' }),
+    body: JSON.stringify({ identifier: 'mohamadabudraiea@gmail.com', password: 'Masar@123' }),
   });
   const mData = await mLogin.json();
   assert.equal(mLogin.status, 200);

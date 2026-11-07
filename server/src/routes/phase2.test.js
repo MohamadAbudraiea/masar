@@ -21,7 +21,7 @@ test.before(async () => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      identifier: 'admin@masar.demo',
+      identifier: 'mohamadabudraiea2003@gmail.com',
       password: 'Masar@123',
     }),
   });

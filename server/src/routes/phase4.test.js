@@ -23,7 +23,7 @@ before(async () => {
   const adminRes = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'admin@masar.demo', password: 'Masar@123' }),
+    body: JSON.stringify({ identifier: 'mohamadabudraiea2003@gmail.com', password: 'Masar@123' }),
   });
   const adminData = await adminRes.json();
   adminToken = adminData.token;
@@ -31,7 +31,7 @@ before(async () => {
   const mfrRes = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'khaled@alnour.demo', password: 'Masar@123' }),
+    body: JSON.stringify({ identifier: 'mohamadabudraiea@gmail.com', password: 'Masar@123' }),
   });
   const mfrData = await mfrRes.json();
   mfrToken = mfrData.token;

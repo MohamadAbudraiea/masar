@@ -24,7 +24,7 @@ before(async () => {
   const adminRes = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'admin@masar.demo', password: 'Masar@123' }),
+    body: JSON.stringify({ identifier: 'mohamadabudraiea2003@gmail.com', password: 'Masar@123' }),
   });
   const adminData = await adminRes.json();
   assert.equal(adminRes.status, 200);
@@ -34,7 +34,7 @@ before(async () => {
   const escrowRes = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'escrow@safepay.demo', password: 'Masar@123' }),
+    body: JSON.stringify({ identifier: 'mohamadabudraiea2003@outlook.com', password: 'Masar@123' }),
   });
   const escrowData = await escrowRes.json();
   assert.equal(escrowRes.status, 200);
@@ -44,7 +44,7 @@ before(async () => {
   const mRes = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: 'khaled@alnour.demo', password: 'Masar@123' }),
+    body: JSON.stringify({ identifier: 'mohamadabudraiea@gmail.com', password: 'Masar@123' }),
   });
   const mData = await mRes.json();
   assert.equal(mRes.status, 200);
