@@ -1480,10 +1480,10 @@ router.post('/:id/rating', async (req, res, next) => {
     }
     const ticket = ticketRes.rows[0];
 
-    if (ticket.status !== 'audited') {
+    if (!['delivered', 'audited'].includes(ticket.status)) {
       throw new AppError(
         'INVALID_STATUS',
-        'Ratings can only be submitted after delivery is confirmed (status: audited)',
+        'Ratings can only be submitted after delivery is completed (status: delivered or audited)',
         409
       );
     }

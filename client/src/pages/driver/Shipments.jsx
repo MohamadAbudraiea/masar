@@ -13,6 +13,7 @@ import {
   ExternalLink,
   ChevronRight,
   Info,
+  Navigation,
 } from 'lucide-react';
 import { apiClient } from '../../api/client.js';
 import { useAuth } from '../../state/auth.jsx';
@@ -123,38 +124,7 @@ export default function DriverShipments() {
         </span>
       </div>
 
-      {/* Active Trip Notice */}
-      {isBusy && (
-        <div
-          onClick={() => navigate('/driver/active')}
-          className="p-4 rounded-2xl bg-blue-50 border border-blue-200 cursor-pointer flex items-center justify-between transition-transform active:scale-98"
-        >
-          <div className="space-y-0.5">
-            <span className="text-sm font-bold uppercase tracking-wider text-blue-700">
-              {isAr ? 'لديك شحنة قيد التنفيذ حالياً' : 'Active Trip in Progress'}
-            </span>
-            <div className="text-[15px] font-black text-navy-900">
-              {activeTicket.ticket_number} · {activeTicket.pickup?.city} → {activeTicket.dest?.city}
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-[15px] font-bold text-blue-700">
-            <span>{isAr ? 'عرض' : 'View'}</span>
-            <ChevronRight className="w-4 h-4 rtl:rotate-180" />
-          </div>
-        </div>
-      )}
-
-      {/* Available Shipments Heading */}
-      <div className="flex items-center justify-between pt-1">
-        <h2 className="text-sm font-black text-navy-900 flex items-center gap-2">
-          <Package className="w-4 h-4 text-emerald-600" />
-          <span>{isAr ? 'الشحنات المتاحة المطابقة لشاحنتك' : 'Open Matching Shipments'}</span>
-        </h2>
-        <span className="px-2 py-0.5 rounded-full text-sm font-bold bg-slate-100 text-slate-700">
-          {availableItems.length}
-        </span>
-      </div>
-
+      {/* Available Shipments or Active Trip View */}
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center gap-3">
           <TruckLoader size="md" />
@@ -171,121 +141,225 @@ export default function DriverShipments() {
             {isAr ? 'إعادة المحاولة' : 'Retry'}
           </button>
         </div>
-      ) : availableItems.length === 0 ? (
-        <div className="p-8 bg-card rounded-2xl border border-line text-center space-y-3">
-          <Package className="w-12 h-12 text-slate-300 mx-auto" />
-          <h3 className="text-sm font-bold text-navy-900">
-            {isAr ? 'لا توجد شحنات مفتوحة حالياً' : 'No open shipments match your truck'}
-          </h3>
-          <p className="text-[15px] text-ink-muted leading-relaxed max-w-xs mx-auto">
-            {isAr
-              ? 'فور أن ينشر أحد المصانع شحنة تطابق مواصفات وحمولة شاحنتك، ستظهر لك هنا مباشرة مع إشعار فوري.'
-              : 'New freight requests matching your truck type and payload capacity will automatically appear here.'}
-          </p>
-        </div>
-      ) : (
+      ) : isBusy ? (
+        /* Driver is busy on an active trip - hide available shipments and show active trip view */
         <div className="space-y-4">
-          {availableItems.map((ticket) => (
-            <div
-              key={ticket.id}
-              className="bg-card rounded-2xl border border-line p-5 shadow-xs space-y-4 transition-all"
-            >
-              {/* Route Banner (High Contrast) */}
-              <div className="flex items-start justify-between gap-2 border-b border-line pb-3">
-                <div>
-                  <span className="text-sm font-bold text-slate-400 block mb-0.5">
-                    {ticket.ticket_number}
-                  </span>
-                  <div className="text-base font-black text-navy-900 flex items-center gap-2">
-                    <span>{ticket.pickup?.city || 'Amman'}</span>
-                    <ArrowRight className="w-4 h-4 text-slate-400 rtl:rotate-180 shrink-0" />
-                    <span>{ticket.dest?.city || 'Zarqa'}</span>
-                  </div>
-                  <div className="text-[15px] text-ink-muted mt-0.5">
-                    {ticket.pickup?.area ? `${ticket.pickup.area} → ` : ''}
-                    {ticket.dest?.area || ''}
-                    {ticket.distance_km ? ` (${ticket.distance_km} km)` : ''}
-                  </div>
+          <div className="bg-card rounded-2xl border-2 border-primary/30 p-6 shadow-sm space-y-5">
+            {/* Header / Notice */}
+            <div className="flex items-start justify-between gap-3 border-b border-line pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Navigation className="w-6 h-6 stroke-[2.2]" />
                 </div>
-
-                {/* Big Bold Earnings Box (Driver sees earnings ONLY) */}
-                <div className="text-end bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl shrink-0">
-                  <span className="text-sm font-bold text-emerald-800 block uppercase tracking-wider">
-                    {isAr ? 'صافي أرباحك' : 'Your Earnings'}
-                  </span>
-                  <div className="text-lg font-black text-emerald-700 leading-tight">
-                    {formatMoney(ticket.earnings)}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                      {activeTicket.status === 'in_delivery'
+                        ? isAr ? 'على الطريق (قيد النقل)' : 'In Transit'
+                        : isAr ? 'بانتظار التحميل' : 'Waiting at Loading'}
+                    </span>
+                    <span className="text-xs font-mono font-bold text-ink-muted">
+                      {activeTicket.ticket_number}
+                    </span>
                   </div>
+                  <h3 className="text-lg font-black text-navy-900 mt-1">
+                    {isAr ? 'لديك رحلة نشطة قيد التنفيذ' : 'You Have an Active Shipment in Progress'}
+                  </h3>
                 </div>
               </div>
 
-              {/* Cargo & Pickup Time */}
-              <div className="grid grid-cols-2 gap-3 text-[15px]">
-                <div>
-                  <span className="text-sm text-ink-muted block">{isAr ? 'البضاعة والحمولة' : 'Cargo'}</span>
-                  <span className="font-bold text-navy-900">{ticket.goods?.category_name}</span>
-                  <span className="text-slate-500 ms-1">
-                    ({ticket.goods?.quantity} {ticket.goods?.unit})
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-sm text-ink-muted block">{isAr ? 'موعد التحميل' : 'Pickup Time'}</span>
-                  <span className="font-semibold text-slate-800">
-                    {formatDateTime(ticket.pickup_at)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Special Badges */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                {ticket.needs_loading && (
-                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-sm font-medium">
-                    {isAr ? 'تحميل بالمصنع' : 'Loading at pickup'}
-                  </span>
-                )}
-                {ticket.needs_unloading && (
-                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-sm font-medium">
-                    {isAr ? 'تفريغ بالموقع' : 'Unloading at dest'}
-                  </span>
-                )}
-                {ticket.is_customs && (
-                  <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 text-sm font-bold border border-blue-200">
-                    {isAr ? 'معاملة جمركية' : 'Customs shipment'}
-                  </span>
-                )}
-                {ticket.is_hazardous && (
-                  <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-sm font-bold border border-amber-200">
-                    ⚠️ ADR
-                  </span>
-                )}
-              </div>
-
-              {/* Big Green Accept Button */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  disabled={acceptingId === ticket.id}
-                  onClick={() => handleAcceptClick(ticket)}
-                  className={`w-full py-3.5 px-4 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-xs ${
-                    ticket.can_accept
-                      ? 'bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white'
-                      : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
-                  }`}
-                >
-                  <CheckCircle className="w-5 h-5" />
-                  <span>
-                    {acceptingId === ticket.id
-                      ? isAr ? 'جاري القبول...' : 'Accepting...'
-                      : !ticket.can_accept
-                      ? isAr ? 'أكمل شحنتك النشطة أولاً' : 'Finish your active shipment first'
-                      : isAr ? 'قبول الشحنة الآن' : 'Accept Shipment'}
-                  </span>
-                </button>
+              <div className="text-end bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl shrink-0">
+                <span className="text-xs font-bold text-emerald-800 block uppercase tracking-wider">
+                  {isAr ? 'أرباح الرحلة' : 'Earnings'}
+                </span>
+                <span className="text-base font-black text-emerald-700">
+                  {formatMoney(activeTicket.earnings)}
+                </span>
               </div>
             </div>
-          ))}
+
+            {/* Route & Cargo details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface/50 p-4 rounded-xl border border-line/60">
+              <div className="space-y-1">
+                <span className="text-xs text-ink-muted block font-semibold">{isAr ? 'خط السير' : 'Route'}</span>
+                <div className="text-base font-black text-navy-900 flex items-center gap-2">
+                  <span>{activeTicket.pickup?.city || 'Amman'}</span>
+                  <ArrowRight className="w-4 h-4 text-slate-400 rtl:rotate-180 shrink-0" />
+                  <span>{activeTicket.dest?.city || 'Zarqa'}</span>
+                </div>
+                <div className="text-xs text-ink-muted">
+                  {activeTicket.pickup?.area ? `${activeTicket.pickup.area} → ` : ''}
+                  {activeTicket.dest?.area || ''}
+                  {activeTicket.distance_km ? ` (${activeTicket.distance_km} km)` : ''}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-xs text-ink-muted block font-semibold">{isAr ? 'البضاعة والحمولة' : 'Cargo'}</span>
+                <div className="text-base font-black text-navy-900">
+                  {activeTicket.goods?.category_name || activeTicket.goods?.category}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {activeTicket.goods?.quantity} {activeTicket.goods?.unit}
+                </div>
+              </div>
+            </div>
+
+            {/* Explanation Message */}
+            <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/80 flex items-start gap-3">
+              <Info className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-900 leading-relaxed">
+                <span className="font-bold block mb-0.5">
+                  {isAr ? 'أكمل رحلتك الحالية للاطلاع على الشحنات المتاحة' : 'Complete your trip to see other shipments'}
+                </span>
+                {isAr
+                  ? 'تلتزم منصة مسار بمبدأ (شحنة واحدة لكل سائق) لضمان الدقة والأمان والتسليم في الموعد. يتم إخفاء قائمة الشحنات المفتوحة حتى تنتهي من تسليم شحنتك الحالية بالكامل، وستظهر فوراً عند إتمامها.'
+                  : 'Masar enforces the 1-shipment-per-driver policy to ensure punctuality and cargo safety. Other available shipments are hidden until you finish your current trip, and will unlock immediately upon delivery.'}
+              </div>
+            </div>
+
+            {/* Primary Action Button */}
+            <button
+              type="button"
+              onClick={() => navigate('/driver/active')}
+              className="w-full py-3.5 px-5 rounded-xl bg-primary hover:bg-primary-hover active:scale-98 text-white text-[15px] font-black shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Navigation className="w-5 h-5 stroke-[2.2]" />
+              <span>{isAr ? 'الانتقال إلى شاشة الرحلة ومتابعة التسليم' : 'Open Active Trip & Delivery Screen'}</span>
+              <ChevronRight className="w-4 h-4 rtl:rotate-180" />
+            </button>
+          </div>
         </div>
+      ) : (
+        <>
+          {/* Available Shipments Heading */}
+          <div className="flex items-center justify-between pt-1">
+            <h2 className="text-sm font-black text-navy-900 flex items-center gap-2">
+              <Package className="w-4 h-4 text-emerald-600" />
+              <span>{isAr ? 'الشحنات المتاحة المطابقة لشاحنتك' : 'Open Matching Shipments'}</span>
+            </h2>
+            <span className="px-2 py-0.5 rounded-full text-sm font-bold bg-slate-100 text-slate-700">
+              {availableItems.length}
+            </span>
+          </div>
+
+          {availableItems.length === 0 ? (
+            <div className="p-8 bg-card rounded-2xl border border-line text-center space-y-3">
+              <Package className="w-12 h-12 text-slate-300 mx-auto" />
+              <h3 className="text-sm font-bold text-navy-900">
+                {isAr ? 'لا توجد شحنات مفتوحة حالياً' : 'No open shipments match your truck'}
+              </h3>
+              <p className="text-[15px] text-ink-muted leading-relaxed max-w-xs mx-auto">
+                {isAr
+                  ? 'فور أن ينشر أحد المصانع شحنة تطابق مواصفات وحمولة شاحنتك، ستظهر لك هنا مباشرة مع إشعار فوري.'
+                  : 'New freight requests matching your truck type and payload capacity will automatically appear here.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {availableItems.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="bg-card rounded-2xl border border-line p-5 shadow-xs space-y-4 transition-all"
+                >
+                  {/* Route Banner (High Contrast) */}
+                  <div className="flex items-start justify-between gap-2 border-b border-line pb-3">
+                    <div>
+                      <span className="text-sm font-bold text-slate-400 block mb-0.5">
+                        {ticket.ticket_number}
+                      </span>
+                      <div className="text-base font-black text-navy-900 flex items-center gap-2">
+                        <span>{ticket.pickup?.city || 'Amman'}</span>
+                        <ArrowRight className="w-4 h-4 text-slate-400 rtl:rotate-180 shrink-0" />
+                        <span>{ticket.dest?.city || 'Zarqa'}</span>
+                      </div>
+                      <div className="text-[15px] text-ink-muted mt-0.5">
+                        {ticket.pickup?.area ? `${ticket.pickup.area} → ` : ''}
+                        {ticket.dest?.area || ''}
+                        {ticket.distance_km ? ` (${ticket.distance_km} km)` : ''}
+                      </div>
+                    </div>
+
+                    {/* Big Bold Earnings Box (Driver sees earnings ONLY) */}
+                    <div className="text-end bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl shrink-0">
+                      <span className="text-sm font-bold text-emerald-800 block uppercase tracking-wider">
+                        {isAr ? 'صافي أرباحك' : 'Your Earnings'}
+                      </span>
+                      <div className="text-lg font-black text-emerald-700 leading-tight">
+                        {formatMoney(ticket.earnings)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cargo & Pickup Time */}
+                  <div className="grid grid-cols-2 gap-3 text-[15px]">
+                    <div>
+                      <span className="text-sm text-ink-muted block">{isAr ? 'البضاعة والحمولة' : 'Cargo'}</span>
+                      <span className="font-bold text-navy-900">{ticket.goods?.category_name}</span>
+                      <span className="text-slate-500 ms-1">
+                        ({ticket.goods?.quantity} {ticket.goods?.unit})
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-sm text-ink-muted block">{isAr ? 'موعد التحميل' : 'Pickup Time'}</span>
+                      <span className="font-semibold text-slate-800">
+                        {formatDateTime(ticket.pickup_at)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Special Badges */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    {ticket.needs_loading && (
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-sm font-medium">
+                        {isAr ? 'تحميل بالمصنع' : 'Loading at pickup'}
+                      </span>
+                    )}
+                    {ticket.needs_unloading && (
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-sm font-medium">
+                        {isAr ? 'تفريغ بالموقع' : 'Unloading at dest'}
+                      </span>
+                    )}
+                    {ticket.is_customs && (
+                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 text-sm font-bold border border-blue-200">
+                        {isAr ? 'معاملة جمركية' : 'Customs shipment'}
+                      </span>
+                    )}
+                    {ticket.is_hazardous && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-sm font-bold border border-amber-200">
+                        ⚠️ ADR
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Big Green Accept Button */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      disabled={acceptingId === ticket.id}
+                      onClick={() => handleAcceptClick(ticket)}
+                      className={`w-full py-3.5 px-4 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-xs ${
+                        ticket.can_accept
+                          ? 'bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white'
+                          : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                      }`}
+                    >
+                      <CheckCircle className="w-5 h-5" />
+                      <span>
+                        {acceptingId === ticket.id
+                          ? isAr ? 'جاري القبول...' : 'Accepting...'
+                          : !ticket.can_accept
+                          ? isAr ? 'أكمل شحنتك النشطة أولاً' : 'Finish your active shipment first'
+                          : isAr ? 'قبول الشحنة الآن' : 'Accept Shipment'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Accept Shipment Confirmation Modal Popup */}

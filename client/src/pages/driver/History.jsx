@@ -166,7 +166,7 @@ export default function DriverHistory() {
                 </div>
 
                 {/* Rating Action for Driver */}
-                {t.status === 'audited' && (
+                {['delivered', 'audited'].includes(t.status) && (
                   <div className="pt-1 flex items-center justify-between border-t border-line/40">
                     {t.rating?.mine ? (
                       <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">

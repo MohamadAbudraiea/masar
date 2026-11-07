@@ -72,9 +72,13 @@ export default function ActiveShipment() {
     try {
       setActionLoading(true);
       await apiClient(`/tickets/${ticket.id}/delivered`, { method: 'POST' });
-      toast.success(isAr ? 'تم تسجيل التسليم بنجاح! أحسنت عملاً.' : 'Delivery confirmed! Great work.');
+      toast.success(
+        isAr
+          ? 'تم تسجيل التسليم بنجاح! يمكنك الآن تقييم المصنع في سجل رحلاتك.'
+          : 'Delivery confirmed! You can now rate the shipper in your trip history.'
+      );
       setShowDeliveredModal(false);
-      navigate('/driver');
+      navigate('/driver/history');
     } catch (err) {
       toast.error(err.message || 'Failed to report delivery');
     } finally {
