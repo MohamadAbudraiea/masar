@@ -7,7 +7,7 @@ import {
   serializeTicketForDriverUnaccepted,
   serializeTicketForDriverAssigned,
 } from '../serializers/ticket.js';
-import { fetchTicketWithDetails } from './tickets.js';
+import { fetchTicketWithDetails, shapeTicketRow } from './tickets.js';
 
 const router = express.Router();
 router.use(auth);
@@ -144,14 +144,7 @@ router.get('/active', async (req, res, next) => {
       return res.json(null);
     }
 
-    const shaped = {
-      ...ticket,
-      goods_category_name: ticket.goods_category_name_en,
-      truck_type_name: ticket.truck_type_name_en,
-      truck_body_name: ticket.truck_body_name_en,
-      truck_photo_urls: ticket.truck_photo_keys || [],
-    };
-
+    const shaped = shapeTicketRow(ticket, req.user.id);
     res.json(serializeTicketForDriverAssigned(shaped));
   } catch (err) {
     next(err);
@@ -214,13 +207,7 @@ router.get('/history', async (req, res, next) => {
     for (const row of listRes.rows) {
       const full = await fetchTicketWithDetails(row.id);
       if (full) {
-        const shaped = {
-          ...full,
-          goods_category_name: full.goods_category_name_en,
-          truck_type_name: full.truck_type_name_en,
-          truck_body_name: full.truck_body_name_en,
-          truck_photo_urls: full.truck_photo_keys || [],
-        };
+        const shaped = shapeTicketRow(full, req.user.id);
         items.push(serializeTicketForDriverAssigned(shaped));
       }
     }

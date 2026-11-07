@@ -28,6 +28,8 @@ doc.pipe(stream1);
 doc.pipe(stream2);
 doc.pipe(stream3);
 
+const TOTAL_PAGES = 3;
+
 // Helper for top header on every page
 function drawHeader(pageNum, totalPages, titleTag = 'Demo & Testing Reference') {
   doc.rect(0, 0, doc.page.width, 64).fill('#071E33'); // Deep Navy
@@ -60,170 +62,43 @@ function drawFooter() {
   );
 }
 
-const TOTAL_PAGES = 5;
-
 // ==========================================
-// PAGE 1: CORE CREDENTIALS & RE-SEED GUIDE
+// PAGE 1: 2 TEST SHIPMENTS SPECIFICATIONS (ORIGINAL PAGE 3)
 // ==========================================
 doc.addPage();
-drawHeader(1, TOTAL_PAGES, 'Core Accounts & Platform Reset');
+drawHeader(1, TOTAL_PAGES, 'Test Shipments (Matching & Non-Matching)');
 
-doc.y = 82;
-doc.fillColor('#071E33').fontSize(16).font('Helvetica-Bold').text('1. Production Demo Accounts');
-doc.fillColor('#64748B').fontSize(9).font('Helvetica').text('Common Password for all accounts: Masar@123  (Also available via 1-tap quick fill on /login)');
-doc.moveDown(0.5);
-
-const accounts = [
-  { role: 'Admin', name: 'Mohamad Abu Draiea (Admin)', email: 'mohamadabudraiea2003@gmail.com', phone: '+962790000000', note: 'Approvals, System Map, Audit Overview' },
-  { role: 'Manufacturer', name: 'Al-Nour Foods Co.', email: 'mohamadabudraiea@gmail.com', phone: '+962790000001', note: 'Create shipments, pay escrow, confirm deliveries' },
-  { role: 'Escrow', name: 'SafePay Escrow Jordan', email: 'mohamadabudraiea2003@outlook.com', phone: '+962790000099', note: 'Holds funds, releases driver payouts, ledger audits' },
-  { role: 'Driver', name: 'Omar Ayman Saleh (Free)', email: 'mohamadayman773@gmail.com', phone: '+962790010001', note: 'Medium Refrigerated Truck (44-12345), ready to accept' },
-];
-
-accounts.forEach((acc, i) => {
-  const y = doc.y;
-  doc.roundedRect(36, y, doc.page.width - 72, 42, 5).fillAndStroke('#F8FAFC', '#E2E8F0');
-  
-  doc.fillColor('#071E33').fontSize(10).font('Helvetica-Bold').text(`[${acc.role}] ${acc.name}`, 48, y + 8);
-  doc.fillColor('#D97706').fontSize(9).font('Helvetica-Bold').text('Password: Masar@123', doc.page.width - 170, y + 8, { width: 120, align: 'right' });
-  
-  doc.fillColor('#0F172A').fontSize(8.5).font('Helvetica').text(`Email: ${acc.email}  |  Phone: ${acc.phone}`, 48, y + 24);
-  doc.fillColor('#64748B').fontSize(8).font('Helvetica').text(acc.note, doc.page.width - 240, y + 24, { width: 190, align: 'right' });
-
-  doc.y = y + 47;
-});
-
-doc.moveDown(0.8);
-doc.fillColor('#071E33').fontSize(14).font('Helvetica-Bold').text('2. How to Re-Seed the Database Anytime');
-doc.fillColor('#64748B').fontSize(9).font('Helvetica').text('Execute this command in your terminal whenever you want to wipe test runs and restore clean seed data:');
-doc.moveDown(0.4);
-
-const cmdY = doc.y;
-doc.roundedRect(36, cmdY, doc.page.width - 72, 38, 5).fill('#0F172A');
-doc.fillColor('#10B981').fontSize(11).font('Courier-Bold').text('cd server; npm run db:seed', 50, cmdY + 12);
-doc.fillColor('#94A3B8').fontSize(8).font('Helvetica').text('(Runs in PowerShell or CMD)', doc.page.width - 180, cmdY + 13);
-
-doc.y = cmdY + 48;
-doc.fillColor('#071E33').fontSize(9.5).font('Helvetica-Bold').text('What the seed script does automatically:');
-doc.fillColor('#475569').fontSize(8.5).font('Helvetica');
-doc.text('• Truncates all platform tables (users, shipments, ledger, ratings, notifications, activity) with CASCADE.');
-doc.text('• Recreates all 4 core accounts above with approved status and password Masar@123.');
-doc.text('• Seeds 7 distinct approved manufacturers across Jordan and 12 diverse drivers with varied trucks.');
-doc.text('• Creates 4 pending approval applicants (2 manufacturers, 2 drivers) in /admin/approvals.');
-doc.text('• Seeds 48 lifecycle shipments (29 audited with ratings, 4 in delivery, 3 delivered, 3 waiting load, 6 pending, 3 requested).');
-doc.text('• Resets ticket sequence so your next live test shipment starts cleanly at MSR-000127.');
-doc.text('• Leaves Captain Omar Ayman completely free and ready to accept new jobs.');
-
-drawFooter();
-
-// ==========================================
-// PAGE 2: SIGN-UP DEMO DATA (DRIVER & MFR)
-// ==========================================
-doc.addPage();
-drawHeader(2, TOTAL_PAGES, 'Registration Form Data');
-
-doc.y = 82;
-doc.fillColor('#071E33').fontSize(15).font('Helvetica-Bold').text('3. Driver Sign-Up Form Data  (/register/driver)');
-doc.fillColor('#64748B').fontSize(8.5).font('Helvetica').text('Fill these values to test driver onboarding and see the applicant appear in /admin/approvals:');
-doc.moveDown(0.4);
-
-const driverFields = [
-  ['Full Name', 'Rami Tareq Al-Zoubi'],
-  ['Email', 'rami.zoubi.demo@gmail.com'],
-  ['Phone Number', '+962795551234'],
-  ['Password', 'Masar@123'],
-  ['Operating Scope', 'Internal (Local within Jordan)'],
-  ['License Class', 'Class 4 (Medium truck up to 7.5t)'],
-  ['IBAN Number', 'JO94CBJO0010000000000131000077'],
-  ['CliQ Alias (Optional)', 'RAMI_ZOUBI'],
-  ['Truck Category', 'Medium'],
-  ['Truck Type', 'Long Chassis'],
-  ['Truck Body', 'Refrigerated  (Cooling: Chilled 2°C to 8°C)'],
-  ['Truck Plate Number', '44-88991  (Jordan Cargo)'],
-  ['Gross Vehicle Weight', 'Medium 2.5t - 7.5t (Gross Weight Code)'],
-  ['ADR Certified', 'No (Unchecked)'],
-  ['Required Document Uploads', 'Upload Page 5 of this PDF or Masar-Sample-Driver-License.pdf'],
-];
-
-driverFields.forEach(([label, val], idx) => {
-  const y = doc.y;
-  const isEven = idx % 2 === 0;
-  doc.rect(36, y, doc.page.width - 72, 17).fill(isEven ? '#F8FAFC' : '#FFFFFF');
-  doc.rect(36, y, doc.page.width - 72, 17).stroke('#E2E8F0');
-
-  doc.fillColor('#64748B').fontSize(8).font('Helvetica').text(label, 44, y + 4, { width: 160 });
-  doc.fillColor('#0F172A').fontSize(8).font('Helvetica-Bold').text(val, 204, y + 4, { width: doc.page.width - 248 });
-  doc.y = y + 17;
-});
-
-doc.moveDown(0.8);
-doc.fillColor('#071E33').fontSize(15).font('Helvetica-Bold').text('4. Manufacturer Sign-Up Form Data  (/register/manufacturer)');
-doc.fillColor('#64748B').fontSize(8.5).font('Helvetica').text('Fill these values to test manufacturer onboarding:');
-doc.moveDown(0.4);
-
-const mfrFields = [
-  ['Company Legal Name', 'Al-Safwa Modern Dairy & Food Industries'],
-  ['Contact Person', 'Eng. Tareq Al-Qadi (General Manager)'],
-  ['Primary Business Email', 'info@alsafwadairy.demo'],
-  ['Primary Phone', '+962796662345'],
-  ['Password', 'Masar@123'],
-  ['Goods Categories', 'Food & Beverages (Check: Dry, Chilled, Frozen)'],
-  ['Factory City & Area', 'City: Zarqa  |  Area: Hashemiyya Industrial Zone'],
-  ['Street Address', 'Building 14, Sector 2, Hashemiyya Industrial Zone, Zarqa'],
-  ['Map Coordinates (Lat / Lng)', '32.0728, 36.0880  (Select Zarqa on picker or type)'],
-  ['Required Document Uploads', 'Upload Page 4 of this PDF or Masar-Sample-Commercial-Registration.pdf'],
-];
-
-mfrFields.forEach(([label, val], idx) => {
-  const y = doc.y;
-  const isEven = idx % 2 === 0;
-  doc.rect(36, y, doc.page.width - 72, 17).fill(isEven ? '#F8FAFC' : '#FFFFFF');
-  doc.rect(36, y, doc.page.width - 72, 17).stroke('#E2E8F0');
-
-  doc.fillColor('#64748B').fontSize(8).font('Helvetica').text(label, 44, y + 4, { width: 160 });
-  doc.fillColor('#0F172A').fontSize(8).font('Helvetica-Bold').text(val, 204, y + 4, { width: doc.page.width - 248 });
-  doc.y = y + 17;
-});
-
-drawFooter();
-
-// ==========================================
-// PAGE 3: 2 TEST SHIPMENTS SPECIFICATIONS
-// ==========================================
-doc.addPage();
-drawHeader(3, TOTAL_PAGES, 'Test Shipments (Matching & Non-Matching)');
-
-doc.y = 82;
-doc.fillColor('#071E33').fontSize(15).font('Helvetica-Bold').text('5. The 2 Test Shipments (Create as Al-Nour Foods Co.)');
-doc.fillColor('#64748B').fontSize(8.5).font('Helvetica').text('Log in as mohamadabudraiea@gmail.com and click "Create Shipment"');
+doc.y = 80;
+doc.fillColor('#071E33').fontSize(16).font('Helvetica-Bold').text('Test Shipments Specifications (Create as Shipper)');
+doc.fillColor('#64748B').fontSize(9).font('Helvetica').text('Log in as Manufacturer and click "Create Shipment"');
 doc.moveDown(0.6);
 
 // Shipment 1 Box
-doc.fillColor('#071E33').fontSize(12).font('Helvetica-Bold').text('Shipment 1: Heavy Structural Steel (Non-Matching / Any Specs)');
+doc.fillColor('#071E33').fontSize(12).font('Helvetica-Bold').text('Shipment 1: Heavy Structural Steel (Non-Matching / Any Requirements)');
 doc.fillColor('#64748B').fontSize(8.5).font('Helvetica').text('Tests standard heavy equipment order (does NOT match Omar Ayman):');
 doc.moveDown(0.3);
 
 const s1BoxY = doc.y;
-doc.roundedRect(36, s1BoxY, doc.page.width - 72, 120, 5).fillAndStroke('#F8FAFC', '#CBD5E1');
+doc.roundedRect(36, s1BoxY, doc.page.width - 72, 115, 5).fillAndStroke('#F8FAFC', '#CBD5E1');
 doc.fillColor('#0F172A').fontSize(8.5).font('Helvetica');
 doc.text('• Goods Category: Machinery & Equipment (or Dry Goods)', 48, s1BoxY + 10);
 doc.text('• Cargo Description: Heavy Structural Steel Rebars (12m bundles)', 48, s1BoxY + 24);
 doc.text('• Quantity: 18.0 tons  |  Trip Type: Local', 48, s1BoxY + 38);
-doc.text('• Pickup Location: Al-Nour Zarqa Factory (Zarqa, Hashemiyya)', 48, s1BoxY + 52);
+doc.text('• Pickup Location: Factory Site (Zarqa, Hashemiyya)', 48, s1BoxY + 52);
 doc.text('• Pickup Date/Time: Tomorrow 10:00 AM', 48, s1BoxY + 66);
 doc.text('• Destination: Aqaba Container Terminal Yard 4, Aqaba', 48, s1BoxY + 80);
 doc.text('• Receiver: Eng. Mahmoud Site Logistics (+962798883333)', 48, s1BoxY + 94);
-doc.text('• Required Truck: Category: Heavy  |  Body: Flatbed  |  Agreed Price: 1,800.000 JD', 48, s1BoxY + 106);
+doc.text('• Required Truck: Category: Heavy  |  Body: Flatbed  |  Agreed Price: 1,800.000 JD', 48, s1BoxY + 104);
 
-doc.y = s1BoxY + 132;
+doc.y = s1BoxY + 128;
 
 // Shipment 2 Box (THE CRITICAL MATCH FOR OMAR AYMAN)
 doc.fillColor('#071E33').fontSize(12).font('Helvetica-Bold').text('Shipment 2: Fresh Dairy (100% MATCH FOR OMAR AYMAN SALEH)');
-doc.fillColor('#10B981').fontSize(8.5).font('Helvetica-Bold').text('GUARANTEED TO APPEAR ON OMAR AYMAN\'S FEED (/driver) AND SHOW THE ACCEPT POPUP MODAL!');
+doc.fillColor('#10B981').fontSize(8.5).font('Helvetica-Bold').text('GUARANTEED TO APPEAR ON OMAR AYMAN\'S FEED (/driver) AND TRIGGER THE ACCEPT POPUP MODAL!');
 doc.moveDown(0.3);
 
 const s2BoxY = doc.y;
-doc.roundedRect(36, s2BoxY, doc.page.width - 72, 190, 5).fillAndStroke('#FFFBEB', '#F59E0B'); // Warm amber border
+doc.roundedRect(36, s2BoxY, doc.page.width - 72, 195, 5).fillAndStroke('#FFFBEB', '#F59E0B'); // Warm amber border
 doc.fillColor('#071E33').fontSize(9).font('Helvetica-Bold').text('Exact Matching Attribute Table:', 48, s2BoxY + 10);
 
 const matchSpecs = [
@@ -231,7 +106,7 @@ const matchSpecs = [
   ['Cargo Description', 'Chilled Fresh Labneh & Halloumi Cheeses (4°C)', 'Commercial dairy product consignment'],
   ['Quantity', '3.5 tons', 'Fits Omar\'s 2.5t - 7.5t payload rating'],
   ['Trip Type', 'Local (within Jordan)', 'Required for Omar\'s internal license scope'],
-  ['Pickup Location', 'Al-Nour Zarqa Factory (Zarqa)', 'Origin terminal in Jordan'],
+  ['Pickup Location', 'Factory Site (Zarqa)', 'Origin terminal in Jordan'],
   ['Pickup Date / Time', 'Tomorrow at 09:00 AM', 'CRITICAL: Must be within 48h visibility window!'],
   ['Loading / Unloading', 'Needs loading: Yes  |  Needs unloading: Yes', 'Check both boxes on form'],
   ['Destination', 'Al-Hashmi St, Irbid (Fresh Market Central)', 'Jordan destination (82 km)'],
@@ -247,24 +122,24 @@ matchSpecs.forEach(([k, v, note]) => {
   doc.fillColor('#0F172A').fontSize(7.8).font('Helvetica-Bold').text(k, 48, rowY, { width: 120 });
   doc.fillColor('#B45309').fontSize(7.8).font('Helvetica-Bold').text(v, 172, rowY, { width: 175 });
   doc.fillColor('#64748B').fontSize(7.5).font('Helvetica').text(note, 350, rowY, { width: doc.page.width - 390 });
-  rowY += 12.2;
+  rowY += 12.4;
 });
 
-doc.y = s2BoxY + 196;
-doc.fillColor('#071E33').fontSize(9).font('Helvetica-Bold').text('Demo Step-by-Step Flow:');
-doc.fillColor('#334155').fontSize(8).font('Helvetica');
+doc.y = s2BoxY + 204;
+doc.fillColor('#071E33').fontSize(9.5).font('Helvetica-Bold').text('Demo Step-by-Step Flow:');
+doc.fillColor('#334155').fontSize(8.5).font('Helvetica');
 doc.text('1. Click "Create Shipment" with the values above. The shipment is created in "requested" status.');
-doc.text('2. In Al-Nour\'s dashboard, click "Pay Escrow" (650 JD). The status moves to "pending" (Escrow locked).');
+doc.text('2. In Manufacturer dashboard, click "Pay Escrow" (650 JD). The status moves to "pending" (Escrow locked).');
 doc.text('3. Log in as Driver (mohamadayman773@gmail.com / Masar@123). Shipment appears at top of feed!');
 doc.text('4. Click "Accept Shipment" button -> The clean in-app confirmation popup appears smoothly without window alerts.');
 
 drawFooter();
 
 // ==========================================
-// PAGE 4: COMMERCIAL REGISTRATION SAMPLE
+// PAGE 2: COMMERCIAL REGISTRATION SAMPLE (ORIGINAL PAGE 4)
 // ==========================================
 doc.addPage();
-drawHeader(4, TOTAL_PAGES, 'Official Sample Commercial Registration');
+drawHeader(2, TOTAL_PAGES, 'Official Sample Commercial Registration');
 
 doc.y = 80;
 doc.fillColor('#071E33').fontSize(16).font('Helvetica-Bold').text('Commercial Registration Certificate');
@@ -321,10 +196,10 @@ doc.text('Issued in Amman, Jordan · Official Commercial Registrar Department', 
 drawFooter();
 
 // ==========================================
-// PAGE 5: DRIVER & VEHICLE LICENSE SAMPLE
+// PAGE 3: DRIVER & VEHICLE LICENSE SAMPLE (ORIGINAL PAGE 5)
 // ==========================================
 doc.addPage();
-drawHeader(5, TOTAL_PAGES, 'Official Sample Driver & Vehicle Permit');
+drawHeader(3, TOTAL_PAGES, 'Official Sample Driver & Vehicle Permit');
 
 doc.y = 80;
 doc.fillColor('#071E33').fontSize(16).font('Helvetica-Bold').text('Commercial Driver & Vehicle Permit');
@@ -380,4 +255,4 @@ doc.text('Verified under Jordan Traffic Law No. 49 · Commercial Transport Direc
 drawFooter();
 
 doc.end();
-console.log('✓ Successfully generated unified 5-page Masar Demo Package PDF!');
+console.log('✓ Successfully generated 3-page Masar Demo Package PDF starting from the 2 shipments!');

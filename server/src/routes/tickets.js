@@ -87,7 +87,7 @@ export async function fetchTicketWithDetails(ticketId, clientOrPool = null) {
 /**
  * Format ticket row for serialization.
  */
-function shapeTicketRow(row, currentUserId) {
+export function shapeTicketRow(row, currentUserId) {
   const mineRating = row.ratings?.find((r) => r.from_user_id === currentUserId);
   const theirsRating = row.ratings?.find((r) => r.to_user_id === currentUserId);
 
